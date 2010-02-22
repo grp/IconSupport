@@ -1,6 +1,5 @@
 Safe icon support library for the iPhone. Uses a unique ID for each combination of packages, so icon state is never lost via respring or uninstalling a new package.
 
 Example usage (in the initializer function of your extension):
-
- dlopen("/Library/MobileSubstrate/DynamicLibraries/IconSupport.dylib");
- [[objc_getClass("ISIconSupport") sharedInstance] addExtension:@"theNameOfMyExtension"];
+  dlopen("/Library/MobileSubstrate/DynamicLibraries/IconSupport.dylib");
+  [[objc_getClass("ISIconSupport") sharedInstance] addExtension:@"theNameOfMyExtension"];
