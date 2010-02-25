@@ -6,17 +6,19 @@
 # For Simulator, copies dylib into DynamicLibraries and restarts the
 #     simulator app with MobileSubstrate activated
 
+PATH=$PATH:/usr/bin
+
 rm -rf "${TARGET_BUILD_DIR}/File System/"
 cp -R "${PROJECT_DIR}/File System/" "${TARGET_BUILD_DIR}/File System/"
-/usr/bin/find "${TARGET_BUILD_DIR}/File System/" -name '._*' -or -name '.DS_Store' -delete
+find "${TARGET_BUILD_DIR}/File System/" -name '._*' -or -name '.DS_Store' -delete
 cp "${TARGET_BUILD_DIR}/${EXECUTABLE_PATH}" "${TARGET_BUILD_DIR}/File System/Library/MobileSubstrate/DynamicLibraries/${EXECUTABLE_NAME}.dylib"
 
 if [ "${PLATFORM_NAME}" == "iphoneos" ]; then
 	if [ -e /Applications/DebMaker.app/Contents/Resources/dpkg-deb ]; then
 		mkdir "${TARGET_BUILD_DIR}/File System/DEBIAN"
 		cp "${PROJECT_DIR}/Packaging/control" "${PROJECT_DIR}/Packaging/preinst" "${PROJECT_DIR}/Packaging/prerm" "${TARGET_BUILD_DIR}/File System/DEBIAN/"
-		PACKAGE_NAME=$(/usr/bin/grep ^Package: ${PROJECT_DIR}/Packaging/control | /usr/bin/cut -d ' ' -f 2)
-		PACKAGE_VERSION=$(/usr/bin/grep ^Version: ${PROJECT_DIR}/Packaging/control | /usr/bin/cut -d ' ' -f 2)
+		PACKAGE_NAME=$(grep ^Package: ${PROJECT_DIR}/Packaging/control | cut -d ' ' -f 2)
+		PACKAGE_VERSION=$(grep ^Version: ${PROJECT_DIR}/Packaging/control | cut -d ' ' -f 2)
 		rm -rf "${TARGET_BUILD_DIR}/${PACKAGE_NAME}_${PACKAGE_VERSION}_iphoneos-arm.deb"
 		/Applications/DebMaker.app/Contents/Resources/dpkg-deb -b "${TARGET_BUILD_DIR}/File System" "${TARGET_BUILD_DIR}/${PACKAGE_NAME}_${PACKAGE_VERSION}_iphoneos-arm.deb" 2> /dev/null
 		rm -rf "${PROJECT_DIR}/${PACKAGE_NAME}_latest_iphoneos-arm.deb"
@@ -43,9 +45,9 @@ if [ "${PLATFORM_NAME}" == "iphonesimulator" ]; then
 	if [ -e /Library/MobileSubstrate/ ]; then
 		rm -f "/Library/MobileSubstrate/DynamicLibraries/${EXECUTABLE_NAME}.dylib";
 		ln -s "${TARGET_BUILD_DIR}/File System/Library/MobileSubstrate/DynamicLibraries/${EXECUTABLE_NAME}.dylib" /Library/MobileSubstrate/DynamicLibraries/${EXECUTABLE_NAME}.dylib;
-		/usr/bin/killall "iPhone Simulator"
-		/usr/bin/killall "SpringBoard"
+		killall "iPhone Simulator"
+		killall "SpringBoard"
 		export DYLD_INSERT_LIBRARIES=/Library/MobileSubstrate/MobileSubstrate.dylib
-		/usr/bin/open "/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications/iPhone Simulator.app"
+		open "/Developer/Platforms/iPhoneSimulator.platform/Developer/Applications/iPhone Simulator.app"
 	fi
 fi

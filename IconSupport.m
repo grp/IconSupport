@@ -121,6 +121,10 @@ CHMethod0(void, SBIconModel, _writeIconState)
 	[springBoardPlist release];
 }
 
+CHMethod1(BOOL, SBIconModel, importState, id, state)
+{
+	return NO; //disable itunes sync
+}
 
 CHConstructor
 {
@@ -133,4 +137,5 @@ CHConstructor
 	CHLoadLateClass(SBIconModel);
 	CHHook0(SBIconModel, _writeIconState);
 	CHHook0(SBIconModel, iconState);
+	CHHook1(SBIconModel, importState);
 }
