@@ -123,7 +123,10 @@ CHMethod0(void, SBIconModel, _writeIconState)
 
 CHMethod1(BOOL, SBIconModel, importState, id, state)
 {
-	return NO; //disable itunes sync
+	if ([[[ISIconSupport sharedInstance] extensionString] isEqual:@""])
+		return NO; //disable itunes sync
+	else
+		return CHSuper1(SBIconModel, importState, state);
 }
 
 CHConstructor
