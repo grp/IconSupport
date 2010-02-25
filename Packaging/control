@@ -5,7 +5,7 @@ Package: com.chpwn.iconsupport
 Section: System
 Pre-Depends: firmware (>= 3.0)
 Depends: mobilesubstrate
-Version: 1.0
+Version: 1.1
 Architecture: iphoneos-arm
 Description: Support library for safe icon tweaks.
 Depiction: http://moreinfo.thebigboss.org/moreinfo/depiction.php?file=iconsupportDp
