@@ -144,7 +144,7 @@ CHMethod1(BOOL, SBIconModel, importState, id, state)
 		return CHSuper1(SBIconModel, importState, state);
 }
 
-CHMethod0(SBIconModel, exportState)
+CHMethod0(id, SBIconModel, exportState)
 {
 	NSArray* originalState = CHSuper0(SBIconModel, exportState);
 	// Extract the dock and keep it identical
@@ -160,13 +160,7 @@ CHMethod0(SBIconModel, exportState)
 			}
 		}
 	}
-	// Prepend an array of 4 message icon dictionary representations
-	NSMutableArray* messageIcons = [[NSMutableArray alloc] init];
-	for (int i=1; i <= 4; i++) {
-		[messageIcons addObject:dictRepresentationForPart(i)];
-	}
-	[holdAllIcons insertObjects:messageIcons atIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0,4)]];
-	[messageIcons release];
+	
 	// Add the padding to the end of the array
 	while (([holdAllIcons count] % 16) != 0) {
 		[holdAllIcons addObject:[NSNumber numberWithInt:0]];
