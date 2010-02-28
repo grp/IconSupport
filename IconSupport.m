@@ -3,8 +3,8 @@
  
                                     -=-=-=-= EXAMPLE USAGE =-=-=-=-
                          
- dlopen("/Library/MobileSubstrate/DynamicLibraries/IconSupport.dylib");
- [[objc_getClass("ISIconSupport") sharedInstance] addExtension:@"theNameOfMyExtension"];
+ dlopen("/Library/MobileSubstrate/DynamicLibraries/IconSupport.dylib", RTLD_NOW);
+ [[objc_getClass("ISIconSupport") sharedInstance] addExtension:@"infiniboard"];
  
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
