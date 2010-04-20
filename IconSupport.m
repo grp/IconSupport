@@ -21,6 +21,7 @@
 // Completely ripped out of FCSB (by chpwn).
 
 CHDeclareClass(SBIconModel);
+CHDeclareClass(SBUIController);
 
 @interface ISIconSupport : NSObject {
 	NSMutableSet *extensions;
@@ -94,27 +95,41 @@ static id representation(id iconListOrDock)
 CHMethod0(id, SBIconModel, iconState) 
 {
 	NSDictionary *previousIconState = CHIvar(self, _previousIconState, NSDictionary *);
+	id ret = nil;
 	
 	if (previousIconState == nil) {
 		NSMutableDictionary *springBoardPlist = [[NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist"] mutableCopy];
 		id newIconState = [[springBoardPlist objectForKey:[@"iconState" stringByAppendingString:[[ISIconSupport sharedInstance] extensionString]]] mutableCopy];
-		if (newIconState) {   // If we has a layout saved already, go ahead and return that.
-			return [newIconState autorelease];
+		
+		// If we has a layout saved already, go ahead and return that.
+		if (newIconState) {   
+			ret = [newIconState autorelease];
 		} else if ([springBoardPlist objectForKey:@"ISLastUsed"]) { // We have a last used icon state, lets use it
 			NSString *oldKeySuffix = [springBoardPlist objectForKey:@"ISLastUsed"];
-			id oldIconState;
-			if ((oldIconState = [springBoardPlist objectForKey:[@"iconState" stringByAppendingString:oldKeySuffix]])) { // Does that icon state actually exist?
+			
+			// Lets go on a serach for icon states...
+			id oldIconState = [springBoardPlist objectForKey:[@"iconState" stringByAppendingString:oldKeySuffix]];
+			if (!oldIconState) oldIconState = [springBoardPlist objectForKey:@"iconState-iconoclasm"];
+			if (!oldIconState) oldIconState = [springBoardPlist objectForKey:@"iconState-fcsb"];
+			if (!oldIconState) oldIconState = [springBoardPlist objectForKey:@"iconState"];
+			
+			// Oh, we found one? Great, lets set as the current one and return it.
+			if (oldIconState) {
 				[springBoardPlist setObject:oldIconState forKey:[@"iconState" stringByAppendingString:[[ISIconSupport sharedInstance] extensionString]]];
 				[springBoardPlist writeToFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist" atomically:YES]; // Write it out to the plist
 				[springBoardPlist setObject:[[ISIconSupport sharedInstance] extensionString] forKey:@"ISLastUsed"];
-				
-				return [oldIconState autorelease];
+					   
+				ret = [oldIconState autorelease];
 			}
 		}
-
 	}
 	
-	return CHSuper0(SBIconModel, iconState);  // Otherwise, just send SpringBoard's and we'll copy it.
+	if (ret == nil) {
+		// Otherwise, just send SpringBoard's and we'll copy it.
+		ret = CHSuper0(SBIconModel, iconState);
+	}
+	
+	return ret;
 }
 
 CHMethod0(void, SBIconModel, _writeIconState)
@@ -122,16 +137,19 @@ CHMethod0(void, SBIconModel, _writeIconState)
 	// Write the icon state to disc in a separate key from SpringBoard's 4x4 default key
 	NSMutableDictionary* newState = [[NSMutableDictionary alloc] init];
 	[newState setObject:representation([self buttonBar]) forKey:@"buttonBar"];
+	
 	NSMutableArray *lists = [[NSMutableArray alloc] init];
 	for (SBIconList *iconList in [self iconLists]) {
 		[lists addObject:representation(iconList)];
 	}
 	[newState setObject:lists forKey:@"iconLists"];
 	[lists release];
+	
 	NSMutableDictionary *springBoardPlist = [[NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist"] mutableCopy];
 	[springBoardPlist setObject:newState forKey:[@"iconState" stringByAppendingString:[[ISIconSupport sharedInstance] extensionString]]];
 	[springBoardPlist setObject:[[ISIconSupport sharedInstance] extensionString] forKey:@"ISLastUsed"];
 	[newState release];
+	
 	[springBoardPlist writeToFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist" atomically:YES];
 	[springBoardPlist release];
 }
@@ -185,6 +203,14 @@ CHMethod0(id, SBIconModel, exportState)
 	return [allPages autorelease];
 }
 
+CHMethod0(void, SBUIController, finishLaunching)
+{
+	CHSuper0(SBUIController, finishLaunching);
+	
+	// Fix for things like LockInfo, that need us to compact the icons lists at this point.
+	[CHSharedInstance(SBIconModel) compactIconLists];
+}
+
 CHConstructor
 {
 	CHAutoreleasePoolForScope();
@@ -198,4 +224,7 @@ CHConstructor
 	CHHook0(SBIconModel, iconState);
 	CHHook1(SBIconModel, importState);
 	CHHook0(SBIconModel, exportState);
+	
+	CHLoadLateClass(SBUIController);
+	CHHook0(SBUIController, finishLaunching);
 }

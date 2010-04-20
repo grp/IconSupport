@@ -1,11 +1,11 @@
-Author: chpwn <infinidock@xuzz.net>
+Author: chpwn <chpwn@xuzz.net>
 Maintainer: BigBoss <bigboss@thebigboss.org>
 Name: IconSupport
 Package: com.chpwn.iconsupport
 Section: System
 Pre-Depends: firmware (>= 3.0)
 Depends: mobilesubstrate
-Version: 1.2
+Version: 1.4
 Architecture: iphoneos-arm
 Description: Support library for safe icon tweaks.
 Depiction: http://moreinfo.thebigboss.org/moreinfo/depiction.php?file=iconsupportDp
