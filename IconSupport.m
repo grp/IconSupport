@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  
                                     -=-=-=-= EXAMPLE USAGE =-=-=-=-
@@ -203,9 +202,9 @@ CHMethod0(id, SBIconModel, exportState)
 	return [allPages autorelease];
 }
 
-CHMethod0(void, SBUIController, finishLaunching)
+CHMethod0(void, SBIconModel, relayout)
 {
-	CHSuper0(SBUIController, finishLaunching);
+	CHSuper0(SBIconModel, relayout);
 	
 	// Fix for things like LockInfo, that need us to compact the icons lists at this point.
 	[CHSharedInstance(SBIconModel) compactIconLists];
@@ -224,7 +223,5 @@ CHConstructor
 	CHHook0(SBIconModel, iconState);
 	CHHook1(SBIconModel, importState);
 	CHHook0(SBIconModel, exportState);
-	
-	CHLoadLateClass(SBUIController);
-	CHHook0(SBUIController, finishLaunching);
+	CHHook0(SBIconModel, relayout);
 }
