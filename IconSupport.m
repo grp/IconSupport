@@ -13,12 +13,22 @@
 #import <UIKit/UIKit.h>
 #import <QuartzCore/QuartzCore.h>
 #import <CoreGraphics/CoreGraphics.h>
-#import <SpringBoard/SpringBoard.h>
-#import <CaptainHook/CaptainHook.h>
+#import "Headers/CaptainHook.h"
+
+// Horrible horrible way of going about doing it but it works /for now/
+// 4.0 is going to need a complete rewrite anyways, so this is good enough.
+#define isiPad() [UIDevice instancesRespondToSelector:@selector(isWildcat)]
+#define kISiPhoneDefaultMaxIconsPerPage 16
+#define kISiPhoneDefaultColumnsPerPage 4
+#define kISiPhoneDefaultRowsPerPage 4
+#define kISiPadDefaultMaxIconsPerPage 20
+#define kISiPadDefaultColumnsPerPage 4
+#define kISiPadDefaultRowsPerPage 5
 
 // Completely ripped out of Iconoclasm (by Sakurina).
 // Completely ripped out of FCSB (by chpwn).
 
+CHDeclareClass(SBIconList);
 CHDeclareClass(SBIconModel);
 CHDeclareClass(SBUIController);
 
@@ -29,6 +39,7 @@ CHDeclareClass(SBUIController);
 + (id)sharedInstance;
 - (NSString *)extensionString;
 - (BOOL)addExtension:(NSString *)extension;
+- (BOOL)isBeingUsedByExtensions;
 
 @end
 
@@ -77,6 +88,10 @@ CHConstructor {
 	return YES;
 }
 
+- (BOOL)isBeingUsedByExtensions {
+	return ![[self extensionString] isEqualToString:@""];
+}
+
 @end
 
 
@@ -93,6 +108,10 @@ static id representation(id iconListOrDock)
 
 CHMethod0(id, SBIconModel, iconState) 
 {
+	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
+		return CHSuper0(SBIconModel, iconState);
+	}
+	
 	NSDictionary *previousIconState = CHIvar(self, _previousIconState, NSDictionary *);
 	id ret = nil;
 	
@@ -133,6 +152,10 @@ CHMethod0(id, SBIconModel, iconState)
 
 CHMethod0(void, SBIconModel, _writeIconState)
 {
+	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
+		CHSuper0(SBIconModel, _writeIconState);
+		return;
+	}
 	// Write the icon state to disc in a separate key from SpringBoard's 4x4 default key
 	NSMutableDictionary* newState = [[NSMutableDictionary alloc] init];
 	[newState setObject:representation([self buttonBar]) forKey:@"buttonBar"];
@@ -155,7 +178,7 @@ CHMethod0(void, SBIconModel, _writeIconState)
 
 CHMethod1(BOOL, SBIconModel, importState, id, state)
 {
-	if (![[[ISIconSupport sharedInstance] extensionString] isEqual:@""])
+	if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions])
 		return NO; //disable itunes sync
 	else
 		return CHSuper1(SBIconModel, importState, state);
@@ -163,9 +186,14 @@ CHMethod1(BOOL, SBIconModel, importState, id, state)
 
 CHMethod0(id, SBIconModel, exportState)
 {
+	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
+		return CHSuper0(SBIconModel, exportState);
+  
 	NSArray* originalState = CHSuper0(SBIconModel, exportState);
 	// Extract the dock and keep it identical
 	NSArray* dock = [originalState objectAtIndex:0];
+
+
 	// Prepare an array to hold all icons' dictionary representations
 	NSMutableArray* holdAllIcons = [[NSMutableArray alloc] init];
 	NSArray* iconLists = [originalState subarrayWithRange:NSMakeRange(1,[originalState count]-1)];
@@ -173,26 +201,36 @@ CHMethod0(id, SBIconModel, exportState)
 		for (NSArray* row in page) {
 			for (id iconDict in row) {
 				if ([iconDict isKindOfClass:[NSDictionary class]])
-					[holdAllIcons addObject:iconDict];
-			}
-		}
-	}
+				  [holdAllIcons addObject:iconDict];
+      }
+    }
+  }
 	
+  int maxPerPage, rows, columns;
+  if (isiPad()) {
+    maxPerPage = kISiPadDefaultMaxIconsPerPage;
+    rows = kISiPadDefaultRowsPerPage;
+    columns = kISiPadDefaultColumnsPerPage;
+  } else {
+    maxPerPage = kISiPhoneDefaultMaxIconsPerPage;
+    rows = kISiPhoneDefaultRowsPerPage;
+    columns = kISiPhoneDefaultColumnsPerPage;
+  }
 	// Add the padding to the end of the array
-	while (([holdAllIcons count] % 16) != 0) {
+	while (([holdAllIcons count] % maxPerPage) != 0) {
 		[holdAllIcons addObject:[NSNumber numberWithInt:0]];
 	}
 	// Split this huge array into 4x4 pages/rows
 	NSMutableArray* allPages = [[NSMutableArray alloc] init];
 	[allPages addObject:dock];
-	int totalPages = ceil([holdAllIcons count] / 16.0);
+	int totalPages = ceil([holdAllIcons count] / maxPerPage);
 	for (int i=0; i < totalPages; i++) {
-		int firstIndex = i * 16;
+		int firstIndex = i * maxPerPage;
 		// Get an array representing all of that pages' icons
-		NSArray* thisPage = [holdAllIcons subarrayWithRange:NSMakeRange(firstIndex, 16)];
+		NSArray* thisPage = [holdAllIcons subarrayWithRange:NSMakeRange(firstIndex, maxPerPage)];
 		NSMutableArray* newPage = [[NSMutableArray alloc] init];
-		for (int j=0; j < 4; j++) { // Number of rows
-			NSArray* thisRow = [thisPage subarrayWithRange:NSMakeRange(j*4, 4)];
+		for (int j=0; j < rows; j++) { // Number of rows
+			NSArray* thisRow = [thisPage subarrayWithRange:NSMakeRange(j*columns, columns)];
 			[newPage addObject:thisRow];
 		}
 		[allPages addObject:newPage];
