@@ -24,6 +24,8 @@
 #define kISiPadDefaultMaxIconsPerPage 20
 #define kISiPadDefaultColumnsPerPage 4
 #define kISiPadDefaultRowsPerPage 5
+#define kCFCoreFoundationVersionNumber_iPhoneOS_4_0 550.32
+#define isiOS4 kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iPhoneOS_4_0
 
 // Completely ripped out of Iconoclasm (by Sakurina).
 // Completely ripped out of FCSB (by chpwn).
@@ -248,6 +250,16 @@ CHMethod0(void, SBIconModel, relayout)
 	[CHSharedInstance(SBIconModel) compactIconLists];
 }
 
+CHMethod0(id, SBIconModel, iconStatePath) {
+  if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions])
+    return [@"/var/mobile/Library/SpringBoard/IconSupportState" stringByAppendingFormat:@"%@.plist", [[ISIconSupport sharedInstance] extensionString]];
+  return CHSuper0(SBIconModel, iconStatePath);
+}
+
+CHMethod1(id, SBIconModel, exportState, BOOL, withFolders) {
+  return CHSuper1(SBIconModel, exportState, NO);
+}
+
 CHConstructor
 {
 	CHAutoreleasePoolForScope();
@@ -257,9 +269,14 @@ CHConstructor
 		return;
 	
 	CHLoadLateClass(SBIconModel);
-	CHHook0(SBIconModel, _writeIconState);
-	CHHook0(SBIconModel, iconState);
+  if (isiOS4) {
+    CHHook0(SBIconModel, iconStatePath);
+    CHHook1(SBIconModel, exportState);
+  } else {
+	  CHHook0(SBIconModel, _writeIconState);
+	  CHHook0(SBIconModel, iconState);
+	  CHHook0(SBIconModel, exportState);
+	  CHHook0(SBIconModel, relayout);
+  }
 	CHHook1(SBIconModel, importState);
-	CHHook0(SBIconModel, exportState);
-	CHHook0(SBIconModel, relayout);
 }
