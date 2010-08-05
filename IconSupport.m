@@ -16,8 +16,7 @@
 #import "Headers/CaptainHook.h"
 
 // Horrible horrible way of going about doing it but it works /for now/
-// 4.0 is going to need a complete rewrite anyways, so this is good enough.
-#define isiPad() [UIDevice instancesRespondToSelector:@selector(isWildcat)]
+#define isiPad() ([UIDevice instancesRespondToSelector:@selector(isWildcat)] && [[UIDevice currentDevice] isWildcat])
 #define kISiPhoneDefaultMaxIconsPerPage 16
 #define kISiPhoneDefaultColumnsPerPage 4
 #define kISiPhoneDefaultRowsPerPage 4
@@ -25,14 +24,18 @@
 #define kISiPadDefaultColumnsPerPage 4
 #define kISiPadDefaultRowsPerPage 5
 #define kCFCoreFoundationVersionNumber_iPhoneOS_4_0 550.32
-#define isiOS4 kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iPhoneOS_4_0
+#define isiOS4 (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iPhoneOS_4_0)
+
 
 // Completely ripped out of Iconoclasm (by Sakurina).
 // Completely ripped out of FCSB (by chpwn).
 
+// Updated for iPad by Sakurina.
+// Updated for iOS4 by Sakurina and chpwn.
+
+
 CHDeclareClass(SBIconList);
 CHDeclareClass(SBIconModel);
-CHDeclareClass(SBUIController);
 
 @interface ISIconSupport : NSObject {
 	NSMutableSet *extensions;
@@ -86,7 +89,7 @@ CHConstructor {
 	if (!extension || [extensions containsObject:extension])
 		return NO;
 	
-	[extensions	addObject:extension];
+	[extensions addObject:extension];
 	return YES;
 }
 
@@ -105,9 +108,58 @@ static id representation(id iconListOrDock)
 		return [iconListOrDock performSelector:@selector(representation)];
 	else if ([iconListOrDock respondsToSelector:@selector(dictionaryRepresentation)])
 		return [iconListOrDock performSelector:@selector(dictionaryRepresentation)];
+
 	return nil;
 }
 
+// 4.x
+CHMethod0(id, SBIconModel, _iconState) {
+	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
+		return CHSuper0(SBIconModel, _iconState);
+
+	NSString *curIconStatePath = [@"/var/mobile/Library/SpringBoard/IconSupportState" stringByAppendingFormat:@"%@.plist", [[ISIconSupport sharedInstance] extensionString]];
+
+	NSString *oldIconStatePath, *oldKeySuffix = [[NSUserDefaults standardUserDefaults] stringForKey:@"ISLastUsed"];
+	if (oldKeySuffix == nil) {
+		oldIconStatePath = [@"~/Library/SpringBoard/IconState.plist" stringByExpandingTildeInPath]; // Yes, this is how Apple does it.
+	} else {
+		oldIconStatePath = [@"/var/mobile/Library/SpringBoard/IconSupportState" stringByAppendingFormat:@"%@.plist", oldKeySuffix];
+	}
+
+	NSDictionary *iconState = nil;
+	if (iconState == nil) iconState = [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"iconState"];	// Legacy icon state support.
+	if (iconState == nil) iconState = [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"iconState2"];	// More legacy support.
+	if (iconState == nil) iconState = [NSDictionary dictionaryWithContentsOfFile:curIconStatePath];			// Try the current state.
+	if (iconState == nil) iconState = [NSDictionary dictionaryWithContentsOfFile:oldIconStatePath];			// Try the old state.
+	if (iconState == nil) iconState = [[objc_getClass("SBPlatformController") sharedInstance] iconState];		// Nothing at all!?
+	if (iconState == nil) [self fuck]; /* I'm not bothering with your lame exception shit, SpringBoard. */		// FUCK!
+			
+	// Save current key for next time.
+	[[NSUserDefaults standardUserDefaults] setObject:[[ISIconSupport sharedInstance] extensionString] forKey:@"ISLastUsed"];
+	
+	// Modernize icon state, in case it's in a legacy format...
+	NSDictionary *modernIconState = [CHClass(SBIconModel) modernIconStateForState:iconState];
+
+	return modernIconState;
+}
+
+CHMethod0(id, SBIconModel, iconStatePath) {
+	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
+		return CHSuper0(SBIconModel, iconStatePath);
+	
+	// Save current key for next time.
+	[[NSUserDefaults standardUserDefaults] setObject:[[ISIconSupport sharedInstance] extensionString] forKey:@"ISLastUsed"];
+
+	// This is for sure an IconSupport state: this is only used for writing, so it doesn't matter if it exists or not.
+	return [@"/var/mobile/Library/SpringBoard/IconSupportState" stringByAppendingFormat:@"%@.plist", [[ISIconSupport sharedInstance] extensionString]];	
+}
+
+CHMethod1(id, SBIconModel, exportState, BOOL, withFolders) {
+	return CHSuper1(SBIconModel, exportState, NO);
+}
+
+
+// 3.x
 CHMethod0(id, SBIconModel, iconState) 
 {
 	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
@@ -135,20 +187,17 @@ CHMethod0(id, SBIconModel, iconState)
 			
 			// Oh, we found one? Great, lets set as the current one and return it.
 			if (oldIconState) {
-				[springBoardPlist setObject:oldIconState forKey:[@"iconState" stringByAppendingString:[[ISIconSupport sharedInstance] extensionString]]];
-				[springBoardPlist writeToFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist" atomically:YES]; // Write it out to the plist
 				[springBoardPlist setObject:[[ISIconSupport sharedInstance] extensionString] forKey:@"ISLastUsed"];
-					   
+				// Save to the current key for next time.
+				[springBoardPlist writeToFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist" atomically:YES];									   
 				ret = [oldIconState autorelease];
 			}
 		}
 	}
 	
-	if (ret == nil) {
-		// Otherwise, just send SpringBoard's and we'll copy it.
-		ret = CHSuper0(SBIconModel, iconState);
-	}
-	
+	// If ret is still nil, just get whatever SpringBoard wants
+	ret = ret ?: CHSuper0(SBIconModel, iconState);
+
 	return ret;
 }
 
@@ -158,8 +207,9 @@ CHMethod0(void, SBIconModel, _writeIconState)
 		CHSuper0(SBIconModel, _writeIconState);
 		return;
 	}
+
 	// Write the icon state to disc in a separate key from SpringBoard's 4x4 default key
-	NSMutableDictionary* newState = [[NSMutableDictionary alloc] init];
+	NSMutableDictionary *newState = [[NSMutableDictionary alloc] init];
 	[newState setObject:representation([self buttonBar]) forKey:@"buttonBar"];
 	
 	NSMutableArray *lists = [[NSMutableArray alloc] init];
@@ -192,9 +242,9 @@ CHMethod0(id, SBIconModel, exportState)
 		return CHSuper0(SBIconModel, exportState);
   
 	NSArray* originalState = CHSuper0(SBIconModel, exportState);
+
 	// Extract the dock and keep it identical
 	NSArray* dock = [originalState objectAtIndex:0];
-
 
 	// Prepare an array to hold all icons' dictionary representations
 	NSMutableArray* holdAllIcons = [[NSMutableArray alloc] init];
@@ -203,41 +253,48 @@ CHMethod0(id, SBIconModel, exportState)
 		for (NSArray* row in page) {
 			for (id iconDict in row) {
 				if ([iconDict isKindOfClass:[NSDictionary class]])
-				  [holdAllIcons addObject:iconDict];
-      }
-    }
-  }
+					[holdAllIcons addObject:iconDict];
+			}
+		}
+	}
 	
-  int maxPerPage, rows, columns;
-  if (isiPad()) {
-    maxPerPage = kISiPadDefaultMaxIconsPerPage;
-    rows = kISiPadDefaultRowsPerPage;
-    columns = kISiPadDefaultColumnsPerPage;
-  } else {
-    maxPerPage = kISiPhoneDefaultMaxIconsPerPage;
-    rows = kISiPhoneDefaultRowsPerPage;
-    columns = kISiPhoneDefaultColumnsPerPage;
-  }
+	int maxPerPage, rows, columns;
+
+	if (isiPad()) {
+		maxPerPage = kISiPadDefaultMaxIconsPerPage;
+		rows = kISiPadDefaultRowsPerPage;
+		columns = kISiPadDefaultColumnsPerPage;
+	} else {
+		maxPerPage = kISiPhoneDefaultMaxIconsPerPage;
+		rows = kISiPhoneDefaultRowsPerPage;
+		columns = kISiPhoneDefaultColumnsPerPage;
+	}
+
 	// Add the padding to the end of the array
 	while (([holdAllIcons count] % maxPerPage) != 0) {
 		[holdAllIcons addObject:[NSNumber numberWithInt:0]];
 	}
+
 	// Split this huge array into 4x4 pages/rows
 	NSMutableArray* allPages = [[NSMutableArray alloc] init];
 	[allPages addObject:dock];
 	int totalPages = ceil([holdAllIcons count] / maxPerPage);
-	for (int i=0; i < totalPages; i++) {
+
+	for (int i = 0; i < totalPages; i++) {
 		int firstIndex = i * maxPerPage;
 		// Get an array representing all of that pages' icons
-		NSArray* thisPage = [holdAllIcons subarrayWithRange:NSMakeRange(firstIndex, maxPerPage)];
-		NSMutableArray* newPage = [[NSMutableArray alloc] init];
-		for (int j=0; j < rows; j++) { // Number of rows
-			NSArray* thisRow = [thisPage subarrayWithRange:NSMakeRange(j*columns, columns)];
+		NSArray *thisPage = [holdAllIcons subarrayWithRange:NSMakeRange(firstIndex, maxPerPage)];
+		NSMutableArray *newPage = [[NSMutableArray alloc] init];
+
+		for (int j = 0; j < rows; j++) { // Number of rows
+			NSArray *thisRow = [thisPage subarrayWithRange:NSMakeRange(j*columns, columns)];
 			[newPage addObject:thisRow];
 		}
+
 		[allPages addObject:newPage];
 		[newPage release];
 	}
+
 	[holdAllIcons release];
 	return [allPages autorelease];
 }
@@ -250,16 +307,6 @@ CHMethod0(void, SBIconModel, relayout)
 	[CHSharedInstance(SBIconModel) compactIconLists];
 }
 
-CHMethod0(id, SBIconModel, iconStatePath) {
-  if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions])
-    return [@"/var/mobile/Library/SpringBoard/IconSupportState" stringByAppendingFormat:@"%@.plist", [[ISIconSupport sharedInstance] extensionString]];
-  return CHSuper0(SBIconModel, iconStatePath);
-}
-
-CHMethod1(id, SBIconModel, exportState, BOOL, withFolders) {
-  return CHSuper1(SBIconModel, exportState, NO);
-}
-
 CHConstructor
 {
 	CHAutoreleasePoolForScope();
@@ -269,14 +316,17 @@ CHConstructor
 		return;
 	
 	CHLoadLateClass(SBIconModel);
-  if (isiOS4) {
-    CHHook0(SBIconModel, iconStatePath);
-    CHHook1(SBIconModel, exportState);
-  } else {
-	  CHHook0(SBIconModel, _writeIconState);
-	  CHHook0(SBIconModel, iconState);
-	  CHHook0(SBIconModel, exportState);
-	  CHHook0(SBIconModel, relayout);
-  }
+
+	if (isiOS4) {
+		CHHook0(SBIconModel, _iconState);
+		CHHook1(SBIconModel, exportState);
+		CHHook0(SBIconModel, iconStatePath);
+	} else {
+		CHHook0(SBIconModel, _writeIconState);
+		CHHook0(SBIconModel, iconState);
+		CHHook0(SBIconModel, exportState);
+		CHHook0(SBIconModel, relayout);
+	}
+
 	CHHook1(SBIconModel, importState);
 }
