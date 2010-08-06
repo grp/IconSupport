@@ -128,7 +128,12 @@ CHMethod0(id, SBIconModel, _iconState) {
 	if (iconState == nil) iconState = [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"iconState2"];	// Legacy support.
 	if (iconState == nil) iconState = [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"iconState"];	// More legacy support.
 	if (iconState == nil) iconState = [[objc_getClass("SBPlatformController") sharedInstance] iconState];		// Nothing at all!?
-	if (iconState == nil) [self fuck]; /* I'm not bothering with your lame exception shit, SpringBoard. */		// FUCK!
+	if (iconState == nil) {
+		// Failed to load an icon state, error out.
+		NSString *file = [NSString stringWithUTF8String:__FILE__];
+		NSString *desc = @"IconSupport: Error: Unable to load icon state.";
+		[[NSAssertionHandler currentHandler] handleFailureInMethod:_cmd object:self file:file lineNumber:__LINE__ description:desc];	
+	}
 			
 	// Save current key for next time.
 	[[NSUserDefaults standardUserDefaults] setObject:[[ISIconSupport sharedInstance] extensionString] forKey:@"ISLastUsed"];
