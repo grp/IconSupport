@@ -162,7 +162,10 @@ CHMethod0(id, SBIconModel, iconStatePath) {
 }
 
 CHMethod1(id, SBIconModel, exportState, BOOL, withFolders) {
-	return CHSuper1(SBIconModel, exportState, NO);
+	if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions])
+		return CHSuper1(SBIconModel, exportState, NO);
+	else
+		return CHSuper1(SBIconModel, exportState, withFolders);
 }
 
 
