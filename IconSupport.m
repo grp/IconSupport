@@ -36,6 +36,7 @@
 
 CHDeclareClass(SBIconList);
 CHDeclareClass(SBIconModel);
+CHDeclareClass(SBUIController);
 
 @interface ISIconSupport : NSObject {
 	NSMutableSet *extensions;
@@ -56,13 +57,11 @@ CHConstructor {
 
 @implementation ISIconSupport
 
-+ (id)sharedInstance
-{
++ (id)sharedInstance {
 	return sharedSupport;
 }
 
-- (id)init
-{
+- (id)init {
 	if ((self = [super init])) {
 		extensions = [[NSMutableSet alloc] init];
 	}
@@ -70,8 +69,7 @@ CHConstructor {
 	return self;
 }
 
-- (NSString *)extensionString
-{
+- (NSString *)extensionString {
 	if ([extensions count] == 0)
 		return @"";
 	
@@ -84,8 +82,7 @@ CHConstructor {
 	return [@"-" stringByAppendingFormat:@"%x", result];
 }
 
-- (BOOL)addExtension:(NSString *)extension
-{
+- (BOOL)addExtension:(NSString *)extension {
 	if (!extension || [extensions containsObject:extension])
 		return NO;
 	
@@ -100,8 +97,7 @@ CHConstructor {
 @end
 
 
-static id representation(id iconListOrDock) 
-{
+static id representation(id iconListOrDock) {
 	// Returns a dictionary representation of an icon list or dock,
 	// as it varies depending on the OS version installed.
 	if ([iconListOrDock respondsToSelector:@selector(representation)])
@@ -127,10 +123,10 @@ CHMethod0(id, SBIconModel, _iconState) {
 	}
 
 	NSDictionary *iconState = nil;
-	if (iconState == nil) iconState = [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"iconState"];	// Legacy icon state support.
-	if (iconState == nil) iconState = [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"iconState2"];	// More legacy support.
 	if (iconState == nil) iconState = [NSDictionary dictionaryWithContentsOfFile:curIconStatePath];			// Try the current state.
 	if (iconState == nil) iconState = [NSDictionary dictionaryWithContentsOfFile:oldIconStatePath];			// Try the old state.
+	if (iconState == nil) iconState = [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"iconState2"];	// Legacy support.
+	if (iconState == nil) iconState = [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"iconState"];	// More legacy support.
 	if (iconState == nil) iconState = [[objc_getClass("SBPlatformController") sharedInstance] iconState];		// Nothing at all!?
 	if (iconState == nil) [self fuck]; /* I'm not bothering with your lame exception shit, SpringBoard. */		// FUCK!
 			
@@ -141,6 +137,12 @@ CHMethod0(id, SBIconModel, _iconState) {
 	NSDictionary *modernIconState = [CHClass(SBIconModel) modernIconStateForState:iconState];
 
 	return modernIconState;
+}
+
+CHMethod0(void, SBUIController, finishLaunching) {
+	CHSuper0(SBUIController, finishLaunching);
+
+	[CHSharedInstance(SBIconModel) _writeIconState];
 }
 
 CHMethod0(id, SBIconModel, iconStatePath) {
@@ -240,7 +242,7 @@ CHMethod0(id, SBIconModel, exportState)
 {
 	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
 		return CHSuper0(SBIconModel, exportState);
-  
+ 
 	NSArray* originalState = CHSuper0(SBIconModel, exportState);
 
 	// Extract the dock and keep it identical
@@ -316,11 +318,13 @@ CHConstructor
 		return;
 	
 	CHLoadLateClass(SBIconModel);
+	CHLoadLateClass(SBUIController);
 
 	if (isiOS4) {
 		CHHook0(SBIconModel, _iconState);
 		CHHook1(SBIconModel, exportState);
 		CHHook0(SBIconModel, iconStatePath);
+		CHHook0(SBUIController, finishLaunching);
 	} else {
 		CHHook0(SBIconModel, _writeIconState);
 		CHHook0(SBIconModel, iconState);
