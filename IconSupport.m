@@ -35,6 +35,7 @@
 
 
 CHDeclareClass(SBIconList);
+CHDeclareClass(SBIconListView);
 CHDeclareClass(SBIconModel);
 CHDeclareClass(SBUIController);
 
@@ -140,8 +141,29 @@ CHMethod0(id, SBIconModel, _iconState) {
 	
 	// Modernize icon state, in case it's in a legacy format...
 	NSDictionary *modernIconState = [CHClass(SBIconModel) modernIconStateForState:iconState];
+		
+  	// Go through each icon list and if one goes > maxIcons, create a new icon list
+	NSArray *iconLists = [modernIconState objectForKey:@"iconLists"];
+	NSMutableArray *newIconLists = [NSMutableArray array];
+	int maxIcons = (int) [CHClass(SBIconListView) maxIcons];
 
-	return modernIconState;
+	for (id iL in iconLists) {
+		NSMutableArray *_iL = [iL mutableCopy];
+		while ([_iL count] > maxIcons) {
+			NSRange range = NSMakeRange(0, maxIcons);
+			NSArray *page = [_iL subarrayWithRange:range];
+			[newIconLists addObject:page];
+			[_iL removeObjectsInRange:range];
+		}
+		
+		if ([_iL count] > 0)
+			[newIconLists addObject:_iL];
+			
+		[_iL release];
+	}
+
+	return [NSMutableDictionary dictionaryWithObjects:[NSArray arrayWithObjects:newIconLists, [modernIconState objectForKey:@"buttonBar"], nil]
+                                           forKeys:[NSArray arrayWithObjects:@"iconLists", @"buttonBar", nil]];
 }
 
 CHMethod0(void, SBUIController, finishLaunching) {
@@ -258,7 +280,7 @@ CHMethod0(id, SBIconModel, exportState)
 
 	// Prepare an array to hold all icons' dictionary representations
 	NSMutableArray* holdAllIcons = [[NSMutableArray alloc] init];
-	NSArray* iconLists = [originalState subarrayWithRange:NSMakeRange(1,[originalState count]-1)];
+	NSArray* iconLists = [originalState subarrayWithRange:NSMakeRange(1, [originalState count] - 1)];
 	for (NSArray* page in iconLists) {
 		for (NSArray* row in page) {
 			for (id iconDict in row) {
@@ -327,6 +349,8 @@ CHConstructor
 	
 	CHLoadLateClass(SBIconModel);
 	CHLoadLateClass(SBUIController);
+	CHLoadLateClass(SBIconList);
+	CHLoadLateClass(SBIconListView);
 
 	if (isiOS4) {
 		CHHook0(SBIconModel, _iconState);
