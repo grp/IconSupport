@@ -37,7 +37,6 @@
 CHDeclareClass(SBIconList);
 CHDeclareClass(SBIconListView);
 CHDeclareClass(SBIconModel);
-CHDeclareClass(SBUIController);
 
 @interface ISIconSupport : NSObject {
 	NSMutableSet *extensions;
@@ -49,6 +48,13 @@ CHDeclareClass(SBUIController);
 - (BOOL)isBeingUsedByExtensions;
 
 @end
+
+#ifdef DEBUG
+#define ISLog NSLog
+#else
+#define ISLog(...) 
+#endif
+
 
 static ISIconSupport *sharedSupport;
 
@@ -111,36 +117,7 @@ static id representation(id iconListOrDock) {
 
 // 4.x
 CHMethod0(id, SBIconModel, _iconState) {
-	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
-		return CHSuper0(SBIconModel, _iconState);
-
-	NSString *curIconStatePath = [@"/var/mobile/Library/SpringBoard/IconSupportState" stringByAppendingFormat:@"%@.plist", [[ISIconSupport sharedInstance] extensionString]];
-
-	NSString *oldIconStatePath, *oldKeySuffix = [[NSUserDefaults standardUserDefaults] stringForKey:@"ISLastUsed"];
-	if (oldKeySuffix == nil) {
-		oldIconStatePath = [@"~/Library/SpringBoard/IconState.plist" stringByExpandingTildeInPath]; // Yes, this is how Apple does it.
-	} else {
-		oldIconStatePath = [@"/var/mobile/Library/SpringBoard/IconSupportState" stringByAppendingFormat:@"%@.plist", oldKeySuffix];
-	}
-
-	NSDictionary *iconState = nil;
-	if (iconState == nil) iconState = [NSDictionary dictionaryWithContentsOfFile:curIconStatePath];			// Try the current state.
-	if (iconState == nil) iconState = [NSDictionary dictionaryWithContentsOfFile:oldIconStatePath];			// Try the old state.
-	if (iconState == nil) iconState = [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"iconState2"];	// Legacy support.
-	if (iconState == nil) iconState = [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"iconState"];	// More legacy support.
-	if (iconState == nil) iconState = [[objc_getClass("SBPlatformController") sharedInstance] iconState];		// Nothing at all!?
-	if (iconState == nil) {
-		// Failed to load an icon state, error out.
-		NSString *file = [NSString stringWithUTF8String:__FILE__];
-		NSString *desc = @"IconSupport: Error: Unable to load icon state.";
-		[[NSAssertionHandler currentHandler] handleFailureInMethod:_cmd object:self file:file lineNumber:__LINE__ description:desc];	
-	}
-			
-	// Save current key for next time.
-	[[NSUserDefaults standardUserDefaults] setObject:[[ISIconSupport sharedInstance] extensionString] forKey:@"ISLastUsed"];
-	
-	// Modernize icon state, in case it's in a legacy format...
-	NSDictionary *modernIconState = [CHClass(SBIconModel) modernIconStateForState:iconState];
+	NSDictionary *modernIconState = CHSuper0(SBIconModel, _iconState);
 		
   	// Go through each icon list and if one goes > maxIcons, create a new icon list
 	NSArray *iconLists = [modernIconState objectForKey:@"iconLists"];
@@ -161,26 +138,34 @@ CHMethod0(id, SBIconModel, _iconState) {
 			
 		[_iL release];
 	}
+	
+	ISLog(@"Verified correct page sizes for current maximum page counts.");
 
 	return [NSMutableDictionary dictionaryWithObjects:[NSArray arrayWithObjects:newIconLists, [modernIconState objectForKey:@"buttonBar"], nil]
                                            forKeys:[NSArray arrayWithObjects:@"iconLists", @"buttonBar", nil]];
-}
-
-CHMethod0(void, SBUIController, finishLaunching) {
-	CHSuper0(SBUIController, finishLaunching);
-
-	[CHSharedInstance(SBIconModel) _writeIconState];
 }
 
 CHMethod0(id, SBIconModel, iconStatePath) {
 	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
 		return CHSuper0(SBIconModel, iconStatePath);
 	
+	NSString *basePath = @"/var/mobile/Library/SpringBoard/";
+	NSString *curPath = [basePath stringByAppendingFormat:@"IconSupportState%@.plist", [[ISIconSupport sharedInstance] extensionString]];
+	NSString *oldPath = [basePath stringByAppendingFormat:@"IconSupportState%@.plist", [[NSUserDefaults standardUserDefaults] stringForKey:@"ISLastUsed"]];;
+	NSString *defPath = [basePath stringByAppendingString:@"IconState.plist"];
+	
+	NSFileManager *manager = [NSFileManager defaultManager];
+	if (![manager fileExistsAtPath:curPath]) {
+		BOOL success = [manager copyItemAtPath:oldPath toPath:curPath error:NULL];
+		if (!success)  [manager copyItemAtPath:defPath toPath:curPath error:NULL];
+		ISLog(@"Moved old icon state to new path %@.", curPath);
+	}
+	
 	// Save current key for next time.
 	[[NSUserDefaults standardUserDefaults] setObject:[[ISIconSupport sharedInstance] extensionString] forKey:@"ISLastUsed"];
-
-	// This is for sure an IconSupport state: this is only used for writing, so it doesn't matter if it exists or not.
-	return [@"/var/mobile/Library/SpringBoard/IconSupportState" stringByAppendingFormat:@"%@.plist", [[ISIconSupport sharedInstance] extensionString]];	
+	ISLog(@"Saved current hash (%@) to ISLastUsed key.", [[ISIconSupport sharedInstance] extensionString]);
+		
+	return curPath;	
 }
 
 CHMethod1(id, SBIconModel, exportState, BOOL, withFolders) {
@@ -348,7 +333,6 @@ CHConstructor
 		return;
 	
 	CHLoadLateClass(SBIconModel);
-	CHLoadLateClass(SBUIController);
 	CHLoadLateClass(SBIconList);
 	CHLoadLateClass(SBIconListView);
 
@@ -356,7 +340,6 @@ CHConstructor
 		CHHook0(SBIconModel, _iconState);
 		CHHook1(SBIconModel, exportState);
 		CHHook0(SBIconModel, iconStatePath);
-		CHHook0(SBUIController, finishLaunching);
 	} else {
 		CHHook0(SBIconModel, _writeIconState);
 		CHHook0(SBIconModel, iconState);
