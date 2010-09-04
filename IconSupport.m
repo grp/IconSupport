@@ -169,10 +169,38 @@ CHMethod0(id, SBIconModel, iconStatePath) {
 }
 
 CHMethod1(id, SBIconModel, exportState, BOOL, withFolders) {
-	if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions])
-		return CHSuper1(SBIconModel, exportState, NO);
-	else
+	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
 		return CHSuper1(SBIconModel, exportState, withFolders);
+  NSArray* origState = CHSuper1(SBIconModel, exportState, withFolders);
+
+  // Extract dock, keep it identical
+  NSArray* dock = [origState objectAtIndex:0];
+
+  // Hold all icons' dict representations
+  NSMutableArray* holder = [NSMutableArray array];
+  NSArray* iconLists = [origState subarrayWithRange:NSMakeRange(1, [origState count]-1)];
+  for (NSArray* iL in iconLists)
+    for (NSDictionary* icon in iL)
+      if ([icon objectForKey:@"iconLists"])
+        // Flatten folders, this is to avoid issues with Infinifolders
+        for (NSArray* whatTheFuckIsThisShit in [icon objectForKey:@"iconLists"])
+          for (NSDictionary* realIcon in whatTheFuckIsThisShit)
+            [holder addObject:realIcon];
+      else
+        [holder addObject:icon];
+
+  // Split into pages of 16
+  NSMutableArray* newState = [NSMutableArray array];
+  [newState addObject:dock];
+  while ([holder count] > kISiPhoneDefaultMaxIconsPerPage) {
+    NSRange range = NSMakeRange(0, kISiPhoneDefaultMaxIconsPerPage);
+    NSArray* page = [holder subarrayWithRange:range];
+    [newState addObject:page];
+    [holder removeObjectsInRange:range];
+  }
+  if ([holder count] > 0)
+    [newState addObject:holder];
+  return newState;
 }
 
 
