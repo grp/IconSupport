@@ -38,6 +38,9 @@ CHDeclareClass(SBIconList);
 CHDeclareClass(SBIconListView);
 CHDeclareClass(SBIconModel);
 
+@class SBFolder;
+@class SBFolderIcon;
+
 @interface ISIconSupport : NSObject {
 	NSMutableSet *extensions;
 }
@@ -115,57 +118,194 @@ static id representation(id iconListOrDock) {
 	return nil;
 }
 
+static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFolder, BOOL isDock)
+{
+    // NOTE: Copy the original state to include display name, dock (if root folder).
+    NSMutableDictionary *newState = [NSMutableDictionary dictionaryWithDictionary:folderState];
+
+    // Determine limits
+    // NOTE: Must create an instance of the given folder to determine the list model class.
+    int maxLists, maxIcons;
+    if (isDock) {
+        maxLists = 1;
+        maxIcons = [objc_getClass("SBDockIconListModel") maxIcons];
+    } else {
+        Class $FolderClass = isRootFolder ? objc_getClass("SBRootFolder") : objc_getClass("SBFolder");
+        SBFolder *folder = [[$FolderClass alloc] init];
+        maxLists = [$FolderClass maxListCount];
+        maxIcons = [[folder listModelClass] maxIcons];
+        [folder release];
+    }
+
+    // Process icon lists
+    NSMutableArray *newIconLists = [NSMutableArray array];
+
+    // Number of lists may exceed maxLists; gather orphaned icons for later redistribution.
+    NSMutableArray *orphanedIcons = [NSMutableArray array];
+
+    NSArray *iconLists = [newState objectForKey:@"iconLists"];
+    unsigned int newListCount = 0;
+    for (NSArray *list in iconLists) {
+        // Make a mutable copy of the list for modification
+        NSMutableArray *oldList = [list mutableCopy];
+
+        // First, check if this list contains any folders; if so, recurse
+        Class $NSDictionary = [NSDictionary class];
+        unsigned int iconCount = [oldList count];
+        for (unsigned int i = 0; i < iconCount; i++) {
+            id icon = [oldList objectAtIndex:i];
+            if ([icon isKindOfClass:$NSDictionary]) {
+                // Fixup the folder; use result to replace old folder
+                NSDictionary *newIcon = fixupFolderState(icon, NO, NO);
+                [oldList replaceObjectAtIndex:i withObject:newIcon];
+            }
+        }
+
+        // If list is too large (icons > maxIcons), split into smaller lists
+        while (iconCount > maxIcons) {
+            // NOTE: Must make sure list limit has not been reached.
+            if (newListCount >= maxLists)
+                break;
+
+            // Create a new icon list containing the allowed number of icons
+            // NOTE: Make new list mutable so icons can be added later (if necessary).
+            NSRange range = NSMakeRange(0, maxIcons);
+            NSArray *newList = [[oldList subarrayWithRange:range] mutableCopy];
+            [newIconLists addObject:newList];
+            [newList release];
+            newListCount++;
+
+            // Remove from old list the icons used in new list
+            [oldList removeObjectsInRange:range];
+            iconCount -= maxIcons;
+        }
+
+        if (iconCount > 0) {
+            // Leftover icons exist
+            if (newListCount < maxLists) {
+                // List limit not reached; add leftovers as final list
+                [newIconLists addObject:oldList];
+                newListCount++;
+            } else {
+                // List limit reached; add leftovers to orphaned list
+                [orphanedIcons addObjectsFromArray:oldList];
+            }
+        }
+
+        [oldList release];
+    }
+
+    // Redistribute orphaned icons
+    unsigned int orphanCount = [orphanedIcons count];
+    if (orphanCount > 0) {
+        // Iterate backwards through lists, adding icons as space permits
+        for (NSMutableArray *list in [newIconLists reverseObjectEnumerator]) {
+            unsigned int iconCount = [list count];
+            if (iconCount < maxIcons) {
+                // This list has room for more icons
+                int length = maxIcons - iconCount;
+                if (length > orphanCount)
+                    length = orphanCount;
+                NSRange range = NSMakeRange(0, length);
+                [list addObjectsFromArray:[orphanedIcons subarrayWithRange:range]];
+
+                // Remove now no-longer-orphaned icons from orphan list
+                [orphanedIcons removeObjectsInRange:range];
+                orphanCount -= range.length;
+            }
+
+            if (orphanCount == 0)
+                // No more orphans
+                break;
+        }
+    }
+
+    // Store the updated icon lists
+    [newState setObject:newIconLists forKey:@"iconLists"];
+
+    return newState;
+}
+
+static BOOL needsConversion_ = NO;
+
 // 4.x
 CHMethod0(id, SBIconModel, _iconState) {
 	NSDictionary *modernIconState = CHSuper0(SBIconModel, _iconState);
-		
-  	// Go through each icon list and if one goes > maxIcons, create a new icon list
-	NSArray *iconLists = [modernIconState objectForKey:@"iconLists"];
-	NSMutableArray *newIconLists = [NSMutableArray array];
-	int maxIcons = (int) [CHClass(SBIconListView) maxIcons];
 
-	for (id iL in iconLists) {
-		NSMutableArray *_iL = [iL mutableCopy];
-		while ([_iL count] > maxIcons) {
-			NSRange range = NSMakeRange(0, maxIcons);
-			NSArray *page = [_iL subarrayWithRange:range];
-			[newIconLists addObject:page];
-			[_iL removeObjectsInRange:range];
-		}
-		
-		if ([_iL count] > 0)
-			[newIconLists addObject:_iL];
-			
-		[_iL release];
-	}
-	
-	ISLog(@"Verified correct page sizes for current maximum page counts.");
+    // If necessary, fix icon state to make sure there are no lost icons
+    if (needsConversion_) {
+        // Fix dock
+        // NOTE: Wrap the array in a fake folder in order to pass to fixup function.
+        // XXX: This code assumes that the dock never has more than one icon list.
+        NSArray *dockLists = [NSArray arrayWithObject:[modernIconState objectForKey:@"buttonBar"]];
+        NSDictionary *dockFolder = [NSDictionary dictionaryWithObject:dockLists forKey:@"iconLists"];
+        dockFolder = fixupFolderState(dockFolder, NO, YES);
+        dockLists = [dockFolder objectForKey:@"iconLists"];
 
-	return [NSMutableDictionary dictionaryWithObjects:[NSArray arrayWithObjects:newIconLists, [modernIconState objectForKey:@"buttonBar"], nil]
-                                           forKeys:[NSArray arrayWithObjects:@"iconLists", @"buttonBar", nil]];
+        // Fix icon lists
+        modernIconState = fixupFolderState(modernIconState, YES, NO);
+        needsConversion_ = NO;
+
+        // Combine fixed dock and lists
+        modernIconState = [[modernIconState mutableCopy] autorelease];
+        [modernIconState setObject:[dockLists lastObject] forKey:@"buttonBar"];
+
+        ISLog(@"Converted icon state for new combination of extensions.");
+    }
+
+    return modernIconState;
 }
 
 CHMethod0(id, SBIconModel, iconStatePath) {
-	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
-		return CHSuper0(SBIconModel, iconStatePath);
-	
-	NSString *basePath = @"/var/mobile/Library/SpringBoard/";
-	NSString *curPath = [basePath stringByAppendingFormat:@"IconSupportState%@.plist", [[ISIconSupport sharedInstance] extensionString]];
-	NSString *oldPath = [basePath stringByAppendingFormat:@"IconSupportState%@.plist", [[NSUserDefaults standardUserDefaults] stringForKey:@"ISLastUsed"]];;
-	NSString *defPath = [basePath stringByAppendingString:@"IconState.plist"];
-	
-	NSFileManager *manager = [NSFileManager defaultManager];
-	if (![manager fileExistsAtPath:curPath]) {
-		BOOL success = [manager copyItemAtPath:oldPath toPath:curPath error:NULL];
-		if (!success)  [manager copyItemAtPath:defPath toPath:curPath error:NULL];
-		ISLog(@"Moved old icon state to new path %@.", curPath);
-	}
-	
-	// Save current key for next time.
-	[[NSUserDefaults standardUserDefaults] setObject:[[ISIconSupport sharedInstance] extensionString] forKey:@"ISLastUsed"];
-	ISLog(@"Saved current hash (%@) to ISLastUsed key.", [[ISIconSupport sharedInstance] extensionString]);
-		
-	return curPath;	
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSFileManager *manager = [NSFileManager defaultManager];
+
+    // Compare the previous and new hash
+    NSString *oldHash = [defaults stringForKey:@"ISLastUsed"];
+    NSString *newHash = [[ISIconSupport sharedInstance] extensionString];
+    ISLog(@"Old hash is: %@, new hash is: %@", oldHash, newHash);
+
+    if (![newHash isEqualToString:oldHash])
+        // NOTE: This should only be possible once (at respring).
+        needsConversion_ = YES;
+
+    NSString *basePath = @"/var/mobile/Library/SpringBoard/";
+    NSString *defPath = [basePath stringByAppendingString:@"IconState.plist"];
+    NSString *oldPath = ([oldHash length] == 0) ? defPath : 
+        [basePath stringByAppendingFormat:@"IconSupportState%@.plist", oldHash];;
+
+    NSString *newPath = nil;
+    if (needsConversion_) {
+        // Determine path for new state file
+        // NOTE: The new file may already exist, due to methods used in older
+        //       versions of IconSupport; delete it.
+        newPath = ([newHash length] == 0) ? defPath : 
+            [basePath stringByAppendingFormat:@"IconSupportState%@.plist", newHash];
+        [manager removeItemAtPath:newPath error:NULL];
+
+        // Copy old state file to new path
+        BOOL success = [manager copyItemAtPath:oldPath toPath:newPath error:NULL];
+        if (success) {
+            // Remove old file so that it does not get reused in the future
+            [manager removeItemAtPath:oldPath error:NULL];
+            ISLog(@"Moved old icon state to new path %@.", newPath);
+        }
+
+        // Save current key for next time
+        [defaults setObject:newHash forKey:@"ISLastUsed"];
+        ISLog(@"Saved current hash (%@) to ISLastUsed key.", newHash);
+    } else {
+        // Hash has not changed; use old path
+        newPath = oldPath;
+    }
+
+    if (![manager fileExistsAtPath:newPath]) {
+        // IconSupport state file does not exist; use default (Safe Mode) file
+        [manager copyItemAtPath:defPath toPath:newPath error:NULL];
+        ISLog(@"IconSupport state file does not exist; using default.");
+    }
+
+    return newPath;	
 }
 
 CHMethod1(id, SBIconModel, exportState, BOOL, withFolders) {
