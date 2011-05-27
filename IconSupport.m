@@ -270,7 +270,7 @@ CHMethod0(id, SBIconModel, _iconState) {
 
         // Combine fixed dock and lists
         modernIconState = [[modernIconState mutableCopy] autorelease];
-        [modernIconState setObject:[dockLists lastObject] forKey:@"buttonBar"];
+        [(NSMutableDictionary *)modernIconState setObject:[dockLists lastObject] forKey:@"buttonBar"];
 
         ISLog(@"Converted icon state for new combination of extensions.");
     }
