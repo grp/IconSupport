@@ -33,6 +33,28 @@
 // Updated for iPad by Sakurina.
 // Updated for iOS4 by Sakurina and chpwn.
 
+// iOS 3.x
+@class SBButtonBar;
+@interface SBIconModel : NSObject
+@property(readonly, retain) NSMutableArray *iconLists;
+@property(readonly, retain) SBButtonBar *buttonBar;
+- (void)compactIconLists;
+@end
+
+// iOS 4.x
+@interface UIDevice (UIDevicePrivate)
+- (BOOL)isWildcat;
+@end
+
+@interface SBFolder : NSObject
++ (int)maxListCount;
+- (Class)listModelClass;
+@end
+
+@interface SBIconListModel : NSObject
++ (int)maxIcons;
+@end
+@interface SBDockIconListModel : SBIconListModel @end
 
 CHDeclareClass(SBIconList);
 CHDeclareClass(SBIconListView);
