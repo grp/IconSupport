@@ -1,3 +1,9 @@
+// Completely ripped out of Iconoclasm (by Sakurina).
+// Completely ripped out of FCSB (by chpwn).
+
+// Updated for iPad by Sakurina.
+// Updated for iOS4 by Sakurina and chpwn.
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  
                                     -=-=-=-= EXAMPLE USAGE =-=-=-=-
@@ -17,6 +23,7 @@
 
 // Horrible horrible way of going about doing it but it works /for now/
 #define isiPad() ([UIDevice instancesRespondToSelector:@selector(isWildcat)] && [[UIDevice currentDevice] isWildcat])
+
 #define kISiPhoneDefaultMaxIconsPerPage 16
 #define kISiPhoneDefaultColumnsPerPage 4
 #define kISiPhoneDefaultRowsPerPage 4
@@ -25,13 +32,6 @@
 #define kISiPadDefaultRowsPerPage 5
 #define kCFCoreFoundationVersionNumber_iPhoneOS_4_0 550.32
 #define isiOS4 (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iPhoneOS_4_0)
-
-
-// Completely ripped out of Iconoclasm (by Sakurina).
-// Completely ripped out of FCSB (by chpwn).
-
-// Updated for iPad by Sakurina.
-// Updated for iOS4 by Sakurina and chpwn.
 
 // iOS 3.x
 @class SBButtonBar;
@@ -129,6 +129,7 @@ CHConstructor {
 @end
 
 
+// 4.x
 static id representation(id iconListOrDock) {
 	// Returns a dictionary representation of an icon list or dock,
 	// as it varies depending on the OS version installed.
@@ -140,8 +141,7 @@ static id representation(id iconListOrDock) {
 	return nil;
 }
 
-static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFolder, BOOL isDock)
-{
+static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFolder, BOOL isDock) {
     // NOTE: Copy the original state to include display name, dock (if root folder).
     NSMutableDictionary *newState = [NSMutableDictionary dictionaryWithDictionary:folderState];
 
@@ -250,7 +250,6 @@ static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFol
 
 static BOOL needsConversion_ = NO;
 
-// 4.x
 CHMethod0(id, SBIconModel, _iconState) {
 	NSDictionary *modernIconState = CHSuper0(SBIconModel, _iconState);
 
@@ -333,30 +332,30 @@ CHMethod0(id, SBIconModel, iconStatePath) {
 CHMethod1(id, SBIconModel, exportState, BOOL, withFolders) {
 	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
 		return CHSuper1(SBIconModel, exportState, withFolders);
-  NSArray* origState = CHSuper1(SBIconModel, exportState, withFolders);
+  NSArray *origState = CHSuper1(SBIconModel, exportState, withFolders);
 
   // Extract dock, keep it identical
-  NSArray* dock = [origState objectAtIndex:0];
+  NSArray *dock = [origState objectAtIndex:0];
 
   // Hold all icons' dict representations
-  NSMutableArray* holder = [NSMutableArray array];
-  NSArray* iconLists = [origState subarrayWithRange:NSMakeRange(1, [origState count]-1)];
-  for (NSArray* iL in iconLists)
-    for (NSDictionary* icon in iL)
+  NSMutableArray *holder = [NSMutableArray array];
+  NSArray *iconLists = [origState subarrayWithRange:NSMakeRange(1, [origState count]-1)];
+  for (NSArray *iL in iconLists)
+    for (NSDictionary *icon in iL)
       if ([icon objectForKey:@"iconLists"])
         // Flatten folders, this is to avoid issues with Infinifolders
-        for (NSArray* whatTheFuckIsThisShit in [icon objectForKey:@"iconLists"])
-          for (NSDictionary* realIcon in whatTheFuckIsThisShit)
+        for (NSArray *whatTheFuckIsThisShit in [icon objectForKey:@"iconLists"])
+          for (NSDictionary *realIcon in whatTheFuckIsThisShit)
             [holder addObject:realIcon];
       else
         [holder addObject:icon];
 
   // Split into pages of 16
-  NSMutableArray* newState = [NSMutableArray array];
+  NSMutableArray *newState = [NSMutableArray array];
   [newState addObject:dock];
   while ([holder count] > kISiPhoneDefaultMaxIconsPerPage) {
     NSRange range = NSMakeRange(0, kISiPhoneDefaultMaxIconsPerPage);
-    NSArray* page = [holder subarrayWithRange:range];
+    NSArray *page = [holder subarrayWithRange:range];
     [newState addObject:page];
     [holder removeObjectsInRange:range];
   }
@@ -367,8 +366,7 @@ CHMethod1(id, SBIconModel, exportState, BOOL, withFolders) {
 
 
 // 3.x
-CHMethod0(id, SBIconModel, iconState) 
-{
+CHMethod0(id, SBIconModel, iconState) {
 	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
 		return CHSuper0(SBIconModel, iconState);
 	}
@@ -408,8 +406,7 @@ CHMethod0(id, SBIconModel, iconState)
 	return ret;
 }
 
-CHMethod0(void, SBIconModel, _writeIconState)
-{
+CHMethod0(void, SBIconModel, _writeIconState) {
 	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
 		CHSuper0(SBIconModel, _writeIconState);
 		return;
@@ -435,29 +432,27 @@ CHMethod0(void, SBIconModel, _writeIconState)
 	[springBoardPlist release];
 }
 
-CHMethod1(BOOL, SBIconModel, importState, id, state)
-{
+CHMethod1(BOOL, SBIconModel, importState, id, state) {
 	if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions])
 		return NO; //disable itunes sync
 	else
 		return CHSuper1(SBIconModel, importState, state);
 }
 
-CHMethod0(id, SBIconModel, exportState)
-{
+CHMethod0(id, SBIconModel, exportState) {
 	if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
 		return CHSuper0(SBIconModel, exportState);
  
-	NSArray* originalState = CHSuper0(SBIconModel, exportState);
+	NSArray *originalState = CHSuper0(SBIconModel, exportState);
 
 	// Extract the dock and keep it identical
-	NSArray* dock = [originalState objectAtIndex:0];
+	NSArray *dock = [originalState objectAtIndex:0];
 
 	// Prepare an array to hold all icons' dictionary representations
-	NSMutableArray* holdAllIcons = [[NSMutableArray alloc] init];
-	NSArray* iconLists = [originalState subarrayWithRange:NSMakeRange(1, [originalState count] - 1)];
-	for (NSArray* page in iconLists) {
-		for (NSArray* row in page) {
+	NSMutableArray *holdAllIcons = [[NSMutableArray alloc] init];
+	NSArray *iconLists = [originalState subarrayWithRange:NSMakeRange(1, [originalState count] - 1)];
+	for (NSArray *page in iconLists) {
+		for (NSArray *row in page) {
 			for (id iconDict in row) {
 				if ([iconDict isKindOfClass:[NSDictionary class]])
 					[holdAllIcons addObject:iconDict];
@@ -483,7 +478,7 @@ CHMethod0(id, SBIconModel, exportState)
 	}
 
 	// Split this huge array into 4x4 pages/rows
-	NSMutableArray* allPages = [[NSMutableArray alloc] init];
+	NSMutableArray *allPages = [[NSMutableArray alloc] init];
 	[allPages addObject:dock];
 	int totalPages = ceil([holdAllIcons count] / maxPerPage);
 
@@ -506,16 +501,14 @@ CHMethod0(id, SBIconModel, exportState)
 	return [allPages autorelease];
 }
 
-CHMethod0(void, SBIconModel, relayout)
-{
+CHMethod0(void, SBIconModel, relayout) {
 	CHSuper0(SBIconModel, relayout);
 	
 	// Fix for things like LockInfo, that need us to compact the icons lists at this point.
 	[CHSharedInstance(SBIconModel) compactIconLists];
 }
 
-CHConstructor
-{
+CHConstructor {
 	CHAutoreleasePoolForScope();
 	
 	// SpringBoard only!
