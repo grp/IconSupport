@@ -179,9 +179,9 @@ static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFol
         }
 
         // If list is too large (icons > maxIcons), split into smaller lists
-        while (iconCount > maxIcons) {
+        while ((int)iconCount > maxIcons) {
             // NOTE: Must make sure list limit has not been reached.
-            if (newListCount >= maxLists)
+            if ((int)newListCount >= maxLists)
                 break;
 
             // Create a new icon list containing the allowed number of icons
@@ -199,7 +199,7 @@ static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFol
 
         if (iconCount > 0) {
             // Leftover icons exist
-            if (newListCount < maxLists) {
+            if ((int)newListCount < maxLists) {
                 // List limit not reached; add leftovers as final list
                 [newIconLists addObject:oldList];
                 newListCount++;
@@ -218,10 +218,10 @@ static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFol
         // Iterate backwards through lists, adding icons as space permits
         for (NSMutableArray *list in [newIconLists reverseObjectEnumerator]) {
             unsigned int iconCount = [list count];
-            if (iconCount < maxIcons) {
+            if ((int)iconCount < maxIcons) {
                 // This list has room for more icons
                 int length = maxIcons - iconCount;
-                if (length > orphanCount)
+                if (length > (int)orphanCount)
                     length = orphanCount;
                 NSRange range = NSMakeRange(0, length);
                 [list addObjectsFromArray:[orphanedIcons subarrayWithRange:range]];
