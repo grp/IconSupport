@@ -14,7 +14,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
-#import "Headers/CaptainHook.h"
+#include <substrate.h>
 
 // Horrible horrible way of going about doing it but it works /for now/
 #define isiPad() ([UIDevice instancesRespondToSelector:@selector(isWildcat)] && [[UIDevice currentDevice] isWildcat])
@@ -46,14 +46,12 @@
 - (Class)listModelClass;
 @end
 
+@interface SBIconList : NSObject @end
+
 @interface SBIconListModel : NSObject
 + (int)maxIcons;
 @end
 @interface SBDockIconListModel : SBIconListModel @end
-
-CHDeclareClass(SBIconList);
-CHDeclareClass(SBIconListView);
-CHDeclareClass(SBIconModel);
 
 @class SBFolder;
 @class SBFolderIcon;
@@ -78,7 +76,7 @@ CHDeclareClass(SBIconModel);
 
 static ISIconSupport *sharedSupport;
 
-CHConstructor {
+__attribute__((constructor)) static void initISIconSupport() {
     sharedSupport = [[ISIconSupport alloc] init];
 }
 
@@ -245,8 +243,19 @@ static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFol
 
 static BOOL needsConversion_ = NO;
 
-CHMethod0(id, SBIconModel, _iconState) {
-    NSDictionary *modernIconState = CHSuper0(SBIconModel, _iconState);
+%hook SBIconModel
+
+// 3.x and 4.x
+- (BOOL)importState:(id)state {
+    // Returning NO disables iTunes sync
+    return [[ISIconSupport sharedInstance] isBeingUsedByExtensions] ? NO : %orig;
+}
+
+// 4.x
+%group GFirmware4x
+
+- (id)_iconState {
+    NSDictionary *modernIconState = %orig;
 
     // If necessary, fix icon state to make sure there are no lost icons
     if (needsConversion_) {
@@ -272,7 +281,7 @@ CHMethod0(id, SBIconModel, _iconState) {
     return modernIconState;
 }
 
-CHMethod0(id, SBIconModel, iconStatePath) {
+- (id)iconStatePath {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSFileManager *manager = [NSFileManager defaultManager];
 
@@ -324,10 +333,11 @@ CHMethod0(id, SBIconModel, iconStatePath) {
     return newPath;
 }
 
-CHMethod1(id, SBIconModel, exportState, BOOL, withFolders) {
+- (id)exportState:(BOOL)withFolders {
+    NSArray *origState = %orig;
+
     if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
-        return CHSuper1(SBIconModel, exportState, withFolders);
-    NSArray *origState = CHSuper1(SBIconModel, exportState, withFolders);
+        return origState;
 
     // Extract dock, keep it identical
     NSArray *dock = [origState objectAtIndex:0];
@@ -359,14 +369,17 @@ CHMethod1(id, SBIconModel, exportState, BOOL, withFolders) {
     return newState;
 }
 
+%end // GFirmware4x
 
 // 3.x
-CHMethod0(id, SBIconModel, iconState) {
+%group GFirmware3x
+
+- (id)iconState {
     if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
-        return CHSuper0(SBIconModel, iconState);
+        return %orig;
     }
 
-    NSDictionary *previousIconState = CHIvar(self, _previousIconState, NSDictionary *);
+    NSDictionary *previousIconState = MSHookIvar<NSDictionary *>(self, "_previousIconState");
     id ret = nil;
 
     if (previousIconState == nil) {
@@ -396,14 +409,12 @@ CHMethod0(id, SBIconModel, iconState) {
     }
 
     // If ret is still nil, just get whatever SpringBoard wants
-    ret = ret ?: CHSuper0(SBIconModel, iconState);
-
-    return ret;
+    return ret ?: %orig;
 }
 
-CHMethod0(void, SBIconModel, _writeIconState) {
+- (void)_writeIconState {
     if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
-        CHSuper0(SBIconModel, _writeIconState);
+        %orig;
         return;
     }
 
@@ -427,18 +438,11 @@ CHMethod0(void, SBIconModel, _writeIconState) {
     [springBoardPlist release];
 }
 
-CHMethod1(BOOL, SBIconModel, importState, id, state) {
-    if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions])
-        return NO; //disable itunes sync
-    else
-        return CHSuper1(SBIconModel, importState, state);
-}
+- (id)exportState {
+    NSArray *originalState = %orig;
 
-CHMethod0(id, SBIconModel, exportState) {
     if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
-        return CHSuper0(SBIconModel, exportState);
-
-    NSArray *originalState = CHSuper0(SBIconModel, exportState);
+        return originalState;
 
     // Extract the dock and keep it identical
     NSArray *dock = [originalState objectAtIndex:0];
@@ -496,34 +500,32 @@ CHMethod0(id, SBIconModel, exportState) {
     return [allPages autorelease];
 }
 
-CHMethod0(void, SBIconModel, relayout) {
-    CHSuper0(SBIconModel, relayout);
+- (void)relayout {
+    %orig;
 
     // Fix for things like LockInfo, that need us to compact the icons lists at this point.
-    [CHSharedInstance(SBIconModel) compactIconLists];
+    [self compactIconLists];
 }
 
-CHConstructor {
-    CHAutoreleasePoolForScope();
+%end // GFirmware3x
 
-    // SpringBoard only!
-    if (![[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"com.apple.springboard"])
-        return;
+%end // SBIconModel
 
-    CHLoadLateClass(SBIconModel);
-    CHLoadLateClass(SBIconList);
-    CHLoadLateClass(SBIconListView);
+__attribute__((constructor)) static void init()
+{
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
-    if (isiOS4) {
-        CHHook0(SBIconModel, _iconState);
-        CHHook1(SBIconModel, exportState);
-        CHHook0(SBIconModel, iconStatePath);
-    } else {
-        CHHook0(SBIconModel, _writeIconState);
-        CHHook0(SBIconModel, iconState);
-        CHHook0(SBIconModel, exportState);
-        CHHook0(SBIconModel, relayout);
+    // NOTE: This library should only be loaded for SpringBoard
+    NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
+    if ([bundleId isEqualToString:@"com.apple.springboard"]) {
+        if (isiOS4) {
+            %init(GFirmware4x);
+        } else {
+            %init(GFirmware3x);
+        }
+
+        %init;
     }
 
-    CHHook1(SBIconModel, importState);
+    [pool release];
 }
