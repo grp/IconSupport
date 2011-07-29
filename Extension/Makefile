@@ -1,6 +1,6 @@
 TWEAK_NAME = IconSupport
 
-IconSupport_OBJCC_FILES = IconSupport.mm
+IconSupport_OBJCC_FILES = IconSupport.mm Preferences.mm
 IconSupport_FRAMEWORKS = UIKit CoreGraphics
 
 include ../theos/makefiles/common.mk
