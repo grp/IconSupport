@@ -282,55 +282,32 @@ static BOOL needsConversion_ = NO;
 }
 
 - (id)iconStatePath {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSFileManager *manager = [NSFileManager defaultManager];
-
     // Compare the previous and new hash
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSString *oldHash = [defaults stringForKey:@"ISLastUsed"];
     NSString *newHash = [[ISIconSupport sharedInstance] extensionString];
     ISLog(@"Old hash is: %@, new hash is: %@", oldHash, newHash);
 
-    if (![newHash isEqualToString:oldHash])
+    if (![newHash isEqualToString:oldHash]) {
         // NOTE: This should only be possible once (at respring).
         needsConversion_ = YES;
 
-    NSString *basePath = @"/var/mobile/Library/SpringBoard/";
-    NSString *defPath = [basePath stringByAppendingString:@"IconState.plist"];
-    NSString *oldPath = ([oldHash length] == 0) ? defPath : 
-        [basePath stringByAppendingFormat:@"IconSupportState%@.plist", oldHash];;
-
-    NSString *newPath = nil;
-    if (needsConversion_) {
-        // Determine path for new state file
-        // NOTE: The new file may already exist, due to methods used in older
-        //       versions of IconSupport; delete it.
-        newPath = ([newHash length] == 0) ? defPath : 
-            [basePath stringByAppendingFormat:@"IconSupportState%@.plist", newHash];
-        [manager removeItemAtPath:newPath error:NULL];
-
-        // Copy old state file to new path
-        BOOL success = [manager copyItemAtPath:oldPath toPath:newPath error:NULL];
-        if (success) {
-            // Remove old file so that it does not get reused in the future
-            [manager removeItemAtPath:oldPath error:NULL];
-            ISLog(@"Moved old icon state to new path %@.", newPath);
-        }
-
-        // Save current key for next time
+        // Save new hash to settings
         [defaults setObject:newHash forKey:@"ISLastUsed"];
         ISLog(@"Saved current hash (%@) to ISLastUsed key.", newHash);
-    } else {
-        // Hash has not changed; use old path
-        newPath = oldPath;
     }
 
-    if (![manager fileExistsAtPath:newPath]) {
+    NSString *basePath = @"/var/mobile/Library/SpringBoard/";
+    NSString *path = [basePath stringByAppendingString:@"IconSupportState.plist"];
+    NSFileManager *manager = [NSFileManager defaultManager];
+    if (![manager fileExistsAtPath:path]) {
         // IconSupport state file does not exist; use default (Safe Mode) file
-        [manager copyItemAtPath:defPath toPath:newPath error:NULL];
+        NSString *defPath = [basePath stringByAppendingString:@"IconState.plist"];
+        [manager copyItemAtPath:defPath toPath:path error:NULL];
         ISLog(@"IconSupport state file does not exist; using default.");
     }
 
-    return newPath;
+    return path;
 }
 
 - (id)exportState:(BOOL)withFolders {
