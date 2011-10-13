@@ -26,7 +26,9 @@
 #define kISiPadDefaultColumnsPerPage 4
 #define kISiPadDefaultRowsPerPage 5
 #define kCFCoreFoundationVersionNumber_iPhoneOS_4_0 550.32
-#define isiOS4 (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iPhoneOS_4_0)
+#define kCFCoreFoundationVersionNumber_iPhoneOS_5_0 674.0
+#define isiOS3 (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iPhoneOS_4_0)
+#define isiOS4 ((kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iPhoneOS_4_0) && (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iPhoneOS_5_0))
 
 // iOS 3.x
 @class SBButtonBar;
@@ -168,11 +170,19 @@ static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFol
         Class $NSDictionary = [NSDictionary class];
         unsigned int iconCount = [oldList count];
         for (unsigned int i = 0; i < iconCount; i++) {
-            id icon = [oldList objectAtIndex:i];
-            if ([icon isKindOfClass:$NSDictionary]) {
+            id item = [oldList objectAtIndex:i];
+            if ([item isKindOfClass:$NSDictionary]) {
+                // Make sure this is a normal folder
+                // NOTE: iOS 5.x has special folders. such as the book shelf
+                // FIXME: Is it actually necessary to skip these folders?
+                NSString *listType = [item objectForKey:@"listType"];
+                if (listType != nil && ![listType isEqualToString:@"folder"])
+                    // Not a normal folder
+                    continue;
+
                 // Fixup the folder; use result to replace old folder
-                NSDictionary *newIcon = fixupFolderState(icon, NO, NO);
-                [oldList replaceObjectAtIndex:i withObject:newIcon];
+                NSDictionary *newItem = fixupFolderState(item, NO, NO);
+                [oldList replaceObjectAtIndex:i withObject:newItem];
             }
         }
 
@@ -243,43 +253,40 @@ static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFol
 
 static BOOL needsConversion_ = NO;
 
-%hook SBIconModel
-
-// 3.x and 4.x
-- (BOOL)importState:(id)state {
-    // Returning NO disables iTunes sync
-    return [[ISIconSupport sharedInstance] isBeingUsedByExtensions] ? NO : %orig;
-}
-
-// 4.x
-%group GFirmware4x
-
-- (id)_iconState {
-    NSDictionary *modernIconState = %orig;
-
+static NSDictionary * fixupIconState(NSDictionary *iconState) {
     // If necessary, fix icon state to make sure there are no lost icons
     if (needsConversion_) {
         // Fix dock
         // NOTE: Wrap the array in a fake folder in order to pass to fixup function.
         // XXX: This code assumes that the dock never has more than one icon list.
-        NSArray *dockLists = [NSArray arrayWithObject:[modernIconState objectForKey:@"buttonBar"]];
-        NSDictionary *dockFolder = [NSDictionary dictionaryWithObject:dockLists forKey:@"iconLists"];
-        dockFolder = fixupFolderState(dockFolder, NO, YES);
-        dockLists = [dockFolder objectForKey:@"iconLists"];
+        NSArray *dock = [NSArray arrayWithObject:[iconState objectForKey:@"buttonBar"]];
+        NSDictionary *folder = [NSDictionary dictionaryWithObject:dock forKey:@"iconLists"];
+        dock = [fixupFolderState(folder, NO, YES) objectForKey:@"iconLists"];
 
         // Fix icon lists
-        modernIconState = fixupFolderState(modernIconState, YES, NO);
+        iconState = fixupFolderState(iconState, YES, NO);
         needsConversion_ = NO;
 
         // Combine fixed dock and lists
-        modernIconState = [[modernIconState mutableCopy] autorelease];
-        [(NSMutableDictionary *)modernIconState setObject:[dockLists lastObject] forKey:@"buttonBar"];
+        iconState = [[iconState mutableCopy] autorelease];
+        [(NSMutableDictionary *)iconState setObject:[dock lastObject] forKey:@"buttonBar"];
 
         ISLog(@"Converted icon state for new combination of extensions.");
     }
 
-    return modernIconState;
+    return iconState;
 }
+
+%hook SBIconModel
+
+// 3.x - 5.x
+- (BOOL)importState:(id)state {
+    // Returning NO disables iTunes sync
+    return [[ISIconSupport sharedInstance] isBeingUsedByExtensions] ? NO : %orig;
+}
+
+// 4.x - 5.x
+%group GFirmware4x5x
 
 - (id)iconStatePath {
     // Compare the previous and new hash
@@ -344,6 +351,24 @@ static BOOL needsConversion_ = NO;
     if ([holder count] > 0)
         [newState addObject:holder];
     return newState;
+}
+
+%end // GFirmware4x5x
+
+// 5.x
+%group GFirmware5x
+
+- (id)_iconState:(BOOL)unknown {
+    return fixupIconState(%orig);
+}
+
+%end // GFirmware5x
+
+// 4.x
+%group GFirmware4x
+
+- (id)_iconState {
+    return fixupIconState(%orig);
 }
 
 %end // GFirmware4x
@@ -495,10 +520,15 @@ __attribute__((constructor)) static void init()
     // NOTE: This library should only be loaded for SpringBoard
     NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
     if ([bundleId isEqualToString:@"com.apple.springboard"]) {
-        if (isiOS4) {
-            %init(GFirmware4x);
-        } else {
+        if (isiOS3) {
             %init(GFirmware3x);
+        } else {
+            %init(GFirmware4x5x);
+
+            if (isiOS4)
+                %init(GFirmware4x);
+            else
+                %init(GFirmware5x);
         }
 
         %init;
