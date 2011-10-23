@@ -245,6 +245,13 @@ static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFol
         }
     }
 
+    // If icon lists array is empty, add a single empty list
+    // NOTE: This can happen for the dock when it contains no icons.
+    // XXX: Can this happen for anything *besides* the dock?
+    if ([newIconLists count] == 0) {
+        [newIconLists addObject:[NSArray array]];
+    }
+
     // Store the updated icon lists
     [newState setObject:newIconLists forKey:@"iconLists"];
 
