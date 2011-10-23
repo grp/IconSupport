@@ -1,15 +1,15 @@
 Homepage: http://moreinfo.thebigboss.org/moreinfo/depiction.php?file=iconsupportData
 Depiction: http://moreinfo.thebigboss.org/moreinfo/depiction.php?file=iconsupportData
-Author: chpwn <chpwn@xuzz.net>
+Author: Sakurina, chpwn, ashikase <gaizin@gmail.com>
 Maintainer: BigBoss <bigboss@thebigboss.org>
 Name: IconSupport
 Package: com.chpwn.iconsupport
-Pre-Depends: firmware (>= 3.0)
-Depends: mobilesubstrate
+Pre-Depends: firmware (>= 3.0), firmware (<< 6.0)
+Depends: mobilesubstrate, jp.ashikase.bugfix.stuckpages, jp.ashikase.bugfix.duplicateicons
 Section: Development
-Version: 1.6.5
+Version: 1.7.2
 Architecture: iphoneos-arm
 Description: Support library for safe icon tweaks.
 Sponsor: thebigboss.org <http://thebigboss.org>
-dev: chpwn
+dev: ashikase
 Tag: role::developer, purpose::extension
