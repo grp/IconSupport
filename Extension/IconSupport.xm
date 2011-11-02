@@ -365,6 +365,12 @@ static NSDictionary * fixupIconState(NSDictionary *iconState) {
 // 5.x
 %group GFirmware5x
 
+- (id)_cachedIconStatePath {
+    // NOTE: Failing to override this could cause Safe Mode's cached layout to
+    //       be used (if it exists) and thus overwrite IconSupport's layout.
+    return @"/var/mobile/Library/SpringBoard/DesiredIconSupportState.plist";
+}
+
 - (id)_iconState:(BOOL)unknown {
     return fixupIconState(%orig);
 }
