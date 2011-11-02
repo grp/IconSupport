@@ -371,7 +371,7 @@ static NSDictionary * fixupIconState(NSDictionary *iconState) {
     return @"/var/mobile/Library/SpringBoard/DesiredIconSupportState.plist";
 }
 
-- (id)_iconState:(BOOL)unknown {
+- (id)_iconState:(BOOL)ignoreDesiredIconStateFile {
     return fixupIconState(%orig);
 }
 
