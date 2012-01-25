@@ -136,6 +136,8 @@ static id representation(id iconListOrDock) {
     return nil;
 }
 
+static BOOL hasSubfolderSupport_ = NO;
+
 static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFolder, BOOL isDock) {
     // NOTE: Copy the original state to include display name, dock (if root folder).
     NSMutableDictionary *newState = [NSMutableDictionary dictionaryWithDictionary:folderState];
@@ -180,9 +182,25 @@ static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFol
                     // Not a normal folder
                     continue;
 
-                // Fixup the folder; use result to replace old folder
+                // Fixup the folder
                 NSDictionary *newItem = fixupFolderState(item, NO, NO);
-                [oldList replaceObjectAtIndex:i withObject:newItem];
+
+                // Remove the old folder
+                [oldList removeObjectAtIndex:i];
+
+                if (isRootFolder || hasSubfolderSupport_) {
+                    // Insert fixed-up folder in place of old folder
+                    [oldList insertObject:newItem atIndex:i];
+                } else {
+                    // Subfolders not supported; orphan the icons for redistribution
+                    for (NSArray *subList in [newItem objectForKey:@"iconLists"]) {
+                        [orphanedIcons addObjectsFromArray:subList];
+                    }
+
+                    // As we did not replace the removed folder, must decrement icon count and counter
+                    iconCount--;
+                    i--;
+                }
             }
         }
 
@@ -303,7 +321,7 @@ static NSDictionary * fixupIconState(NSDictionary *iconState) {
     ISLog(@"Old hash is: %@, new hash is: %@", oldHash, newHash);
 
     if (![newHash isEqualToString:oldHash]) {
-        // NOTE: This should only be possible once (at respring).
+    // NOTE: This should only be possible once (at respring).
         needsConversion_ = YES;
 
         // Save new hash to settings
@@ -542,6 +560,12 @@ __attribute__((constructor)) static void init()
                 %init(GFirmware4x);
             else
                 %init(GFirmware5x);
+
+            // FIXME: Find a better way to detect if subfolders are supported.
+            NSFileManager *manager = [NSFileManager defaultManager];
+            hasSubfolderSupport_ =
+                [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FolderEnhancer.dylib"] ||
+                [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FoldersInFolders.dylib"];
         }
 
         %init;
