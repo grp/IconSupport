@@ -314,14 +314,32 @@ static NSDictionary * fixupIconState(NSDictionary *iconState) {
 %group GFirmware4x5x
 
 - (id)iconStatePath {
+    NSString *defPath = %orig;
+
+    NSString *basePath = [defPath stringByDeletingLastPathComponent];
+    NSString *path = [basePath stringByAppendingString:@"/IconSupportState.plist"];
+    NSFileManager *manager = [NSFileManager defaultManager];
+
     // Compare the previous and new hash
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSString *oldHash = [defaults stringForKey:@"ISLastUsed"];
     NSString *newHash = [[ISIconSupport sharedInstance] extensionString];
     ISLog(@"Old hash is: %@, new hash is: %@", oldHash, newHash);
 
-    if (![newHash isEqualToString:oldHash]) {
     // NOTE: This should only be possible once (at respring).
+    if (![newHash isEqualToString:oldHash]) {
+        // If no IconSupport-using extensions are loaded, rename the state file
+        if ([newHash isEqualToString:@""] && [manager fileExistsAtPath:path]) {
+            BOOL success = [manager removeItemAtPath:defPath error:NULL];
+            if (success) {
+                success = [manager copyItemAtPath:path toPath:defPath error:NULL];
+                if (success) {
+                    [manager removeItemAtPath:path error:NULL];
+                }
+            }
+        }
+
+        // Mark that the icon state may require fixing-up
         needsConversion_ = YES;
 
         // Save new hash to settings
@@ -329,12 +347,10 @@ static NSDictionary * fixupIconState(NSDictionary *iconState) {
         ISLog(@"Saved current hash (%@) to ISLastUsed key.", newHash);
     }
 
-    NSString *basePath = @"/var/mobile/Library/SpringBoard/";
-    NSString *path = [basePath stringByAppendingString:@"IconSupportState.plist"];
-    NSFileManager *manager = [NSFileManager defaultManager];
-    if (![manager fileExistsAtPath:path]) {
+    if ([newHash isEqualToString:@""]) {
+        path = defPath;
+    } else if (![manager fileExistsAtPath:path]) {
         // IconSupport state file does not exist; use default (Safe Mode) file
-        NSString *defPath = [basePath stringByAppendingString:@"IconState.plist"];
         [manager copyItemAtPath:defPath toPath:path error:NULL];
         ISLog(@"IconSupport state file does not exist; using default.");
     }
