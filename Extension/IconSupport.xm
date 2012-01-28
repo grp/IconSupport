@@ -402,7 +402,13 @@ static NSDictionary * fixupIconState(NSDictionary *iconState) {
 - (id)_cachedIconStatePath {
     // NOTE: Failing to override this could cause Safe Mode's cached layout to
     //       be used (if it exists) and thus overwrite IconSupport's layout.
-    return @"/var/mobile/Library/SpringBoard/DesiredIconSupportState.plist";
+    NSString *path = %orig;
+
+    if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
+        path = [[path stringByDeletingLastPathComponent] stringByAppendingString:@"/DesiredIconSupportState.plist"];
+    }
+
+    return path;
 }
 
 - (id)_iconState:(BOOL)ignoreDesiredIconStateFile {
