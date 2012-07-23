@@ -14,6 +14,8 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
+#import "ISIconSupport.h"
+
 #include <substrate.h>
 
 // Horrible horrible way of going about doing it but it works /for now/
@@ -30,119 +32,11 @@
 #define isiOS3 (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iPhoneOS_4_0)
 #define isiOS4 ((kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iPhoneOS_4_0) && (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iPhoneOS_5_0))
 
-// iOS 3.x
-@class SBButtonBar;
-@interface SBIconModel : NSObject
-@property(readonly, retain) NSMutableArray *iconLists;
-@property(readonly, retain) SBButtonBar *buttonBar;
-+ (id)sharedInstance;
-- (void)compactIconLists;
-- (id)iconState;
-- (void)noteIconStateChangedExternally;
-@end
-@interface SBIconModel (Firmware_GTE_40)
-- (id)iconStatePath;
-@end
-
-// iOS 4.x
-@interface UIDevice (UIDevicePrivate)
-- (BOOL)isWildcat;
-@end
-
-@interface SBFolder : NSObject
-+ (int)maxListCount;
-- (Class)listModelClass;
-@end
-@interface SBRootFolder : SBFolder
-- (id)dockModel;
-@end
-
-@interface SBIconList : NSObject @end
-
-@interface SBIconListModel : NSObject
-+ (int)maxIcons;
-@end
-@interface SBDockIconListModel : SBIconListModel @end
-
-@class SBFolderIcon;
-
-@interface ISIconSupport : NSObject {
-    NSMutableSet *extensions;
-}
-
-+ (id)sharedInstance;
-- (NSString *)extensionString;
-- (BOOL)addExtension:(NSString *)extension;
-- (BOOL)isBeingUsedByExtensions;
-- (void)repairAndReloadIconState;
-
-@end
-
 #ifdef DEBUG
 #define ISLog NSLog
 #else
 #define ISLog(...) 
 #endif
-
-static NSDictionary * repairIconState(NSDictionary *iconState);
-
-static ISIconSupport *sharedSupport;
-
-__attribute__((constructor)) static void initISIconSupport() {
-    sharedSupport = [[ISIconSupport alloc] init];
-}
-
-@implementation ISIconSupport
-
-+ (id)sharedInstance {
-    return sharedSupport;
-}
-
-- (id)init {
-    if ((self = [super init])) {
-        extensions = [[NSMutableSet alloc] init];
-    }
-
-    return self;
-}
-
-- (NSString *)extensionString {
-    if ([extensions count] == 0)
-        return @"";
-
-    // Ensure it is unique for a certain set of extensions
-    int result = 0;
-    for (NSString *extension in extensions) {
-        result |= [extension hash];
-    }
-
-    return [@"-" stringByAppendingFormat:@"%x", result];
-}
-
-- (BOOL)addExtension:(NSString *)extension {
-    if (!extension || [extensions containsObject:extension])
-        return NO;
-
-    [extensions addObject:extension];
-    return YES;
-}
-
-- (BOOL)isBeingUsedByExtensions {
-    return ![[self extensionString] isEqualToString:@""];
-}
-
-- (void)repairAndReloadIconState {
-    SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
-    id iconState = [iconModel iconState];
-    id newIconState = repairIconState(iconState);
-    if (![newIconState isEqual:iconState]) {
-        [newIconState writeToFile:[iconModel iconStatePath] atomically:YES];
-        [iconModel noteIconStateChangedExternally];
-    }
-}
-
-@end
-
 
 // 4.x
 static id representation(id iconListOrDock) {
@@ -304,7 +198,7 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRo
     return updatedFolderState;
 }
 
-static NSDictionary * repairIconState(NSDictionary *iconState) {
+NSDictionary * repairIconState(NSDictionary *iconState) {
     // Update icon lists for the dock
     // NOTE: Wrap the array in a fake folder in order to pass to update function.
     // XXX: This code assumes that the dock never has more than one icon list.
