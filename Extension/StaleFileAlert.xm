@@ -38,17 +38,16 @@
 }
 
 - (void)configure:(BOOL)configure requirePasscodeForActions:(BOOL)require {
-    NSString *title = @"WARNING";
+    NSString *title = @"IconSupport Warning";
     NSString *body = @"An icon layout file from a previous installation of IconSupport has been detected.\n\n"
-        "Using this file will restore the icon layout from the last time that IconSupport was installed, which may have been long ago.\n\n"
-        "Do you wish to use this file?";
+        "Using this file will restore the icon layout from the last time that IconSupport was installed, which may have been long ago.";
 
     UIAlertView *alertView = [self alertSheet];
     [alertView setDelegate:self];
     [alertView setTitle:title];
     [alertView setMessage:body];
-    [alertView addButtonWithTitle:@"No"];
-    [alertView addButtonWithTitle:@"Yes"];
+    [alertView addButtonWithTitle:@"Delete"];
+    [alertView addButtonWithTitle:@"Use"];
 }
 
 %end
