@@ -36,6 +36,11 @@
 @property(readonly, retain) NSMutableArray *iconLists;
 @property(readonly, retain) SBButtonBar *buttonBar;
 - (void)compactIconLists;
+- (id)iconState;
+- (void)noteIconStateChangedExternally;
+@end
+@interface SBIconModel (Firmware_GTE_40)
+- (id)iconStatePath;
 @end
 
 // iOS 4.x
@@ -47,6 +52,9 @@
 + (int)maxListCount;
 - (Class)listModelClass;
 @end
+@interface SBRootFolder : SBFolder
+- (id)dockModel;
+@end
 
 @interface SBIconList : NSObject @end
 
@@ -55,7 +63,6 @@
 @end
 @interface SBDockIconListModel : SBIconListModel @end
 
-@class SBFolder;
 @class SBFolderIcon;
 
 @interface ISIconSupport : NSObject {
@@ -138,166 +145,166 @@ static id representation(id iconListOrDock) {
 
 static BOOL hasSubfolderSupport_ = NO;
 
-static NSDictionary * fixupFolderState(NSDictionary *folderState, BOOL isRootFolder, BOOL isDock) {
-    // NOTE: Copy the original state to include display name, dock (if root folder).
-    NSMutableDictionary *newState = [NSMutableDictionary dictionaryWithDictionary:folderState];
+// Number of lists in a folder may exceed maxLists; gather orphaned icons for later redistribution
+static NSMutableArray *orphanedIcons_ = nil;
 
-    // Determine limits
-    // NOTE: Must create an instance of the given folder to determine the list model class.
-    int maxLists, maxIcons;
-    if (isDock) {
-        maxLists = 1;
-        maxIcons = [objc_getClass("SBDockIconListModel") maxIcons];
+static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRootFolder, BOOL isDock)
+{
+    NSMutableArray *iconLists = [NSMutableArray array];
+
+    NSArray *currentIconLists = [folderState objectForKey:@"iconLists"];
+    if ([currentIconLists count] == 0) {
+        // Icon lists array is empty; add a single empty list
+        // NOTE: This can happen for the dock when it contains no icons.
+        // XXX: Can this happen for anything *besides* the dock?
+        NSArray *array = [[NSArray alloc] init];
+        [iconLists addObject:array];
+        [array release];
     } else {
-        Class $FolderClass = isRootFolder ? objc_getClass("SBRootFolder") : objc_getClass("SBFolder");
+        // If this is the root folder or the dock, create global orphaned icons array
+        if (isRootFolder || isDock) {
+            // NOTE: Root folder and dock are processed separately.
+            orphanedIcons_ = [[NSMutableArray alloc] init];
+        }
+
+        // Determine icon, list limits for the given folder
+        // NOTE: Must create an instance of the folder to determine the list model class.
+        // FIXME: If handling of special folders is ever added, this part will
+        //        need to be updated in order to process correct folder class.
+        int maxLists, maxIcons;
+        Class $FolderClass = (isRootFolder || isDock) ? objc_getClass("SBRootFolder") : objc_getClass("SBFolder");
         SBFolder *folder = [[$FolderClass alloc] init];
-        maxLists = [$FolderClass maxListCount];
-        maxIcons = [[folder listModelClass] maxIcons];
+        if (isDock) {
+            maxLists = 1;
+            maxIcons = [[[(SBRootFolder *)folder dockModel] class] maxIcons];
+        } else {
+            maxLists = [$FolderClass maxListCount];
+            maxIcons = [[folder listModelClass] maxIcons];
+        }
         [folder release];
-    }
 
-    // Process icon lists
-    NSMutableArray *newIconLists = [NSMutableArray array];
+        // Look for and process any subfolders
+        for (NSArray *list in currentIconLists) {
+            // Make a mutable copy of the list for modification
+            NSMutableArray *iconList = [list mutableCopy];
 
-    // Number of lists may exceed maxLists; gather orphaned icons for later redistribution.
-    NSMutableArray *orphanedIcons = [NSMutableArray array];
-
-    NSArray *iconLists = [newState objectForKey:@"iconLists"];
-    unsigned int newListCount = 0;
-    for (NSArray *list in iconLists) {
-        // Make a mutable copy of the list for modification
-        NSMutableArray *oldList = [list mutableCopy];
-
-        // First, check if this list contains any folders; if so, recurse
-        Class $NSDictionary = [NSDictionary class];
-        unsigned int iconCount = [oldList count];
-        for (unsigned int i = 0; i < iconCount; i++) {
-            id item = [oldList objectAtIndex:i];
-            if ([item isKindOfClass:$NSDictionary]) {
-                // Make sure this is a normal folder
-                // NOTE: iOS 5.x has special folders. such as the book shelf
+            Class $NSDictionary = [NSDictionary class];
+            unsigned int numOfIcons = [iconList count];
+            for (unsigned int i = 0; i < numOfIcons; i++) {
+                // NOTE: iOS 5.x has special folders. such as Newsstand;
+                //       only process 'normal' folders.
                 // FIXME: Is it actually necessary to skip these folders?
-                NSString *listType = [item objectForKey:@"listType"];
-                if (listType != nil && ![listType isEqualToString:@"folder"])
-                    // Not a normal folder
-                    continue;
+                id item = [iconList objectAtIndex:i];
+                if ([item isKindOfClass:$NSDictionary] &&
+                    [[item objectForKey:@"listType"] isEqualToString:@"folder"]) {
+                    // Update the icon state for the subfolder
+                    NSDictionary *subFolderState = repairFolderIconState(item, NO, NO);
 
-                // Fixup the folder
-                NSDictionary *newItem = fixupFolderState(item, NO, NO);
+                    // Remove the old folder
+                    [iconList removeObjectAtIndex:i];
 
-                // Remove the old folder
-                [oldList removeObjectAtIndex:i];
+                    if (isRootFolder || hasSubfolderSupport_) {
+                        // Insert fixed-up folder in place of old folder
+                        [iconList insertObject:subFolderState atIndex:i];
+                    } else {
+                        // Subfolders not supported; orphan the icons for redistribution
+                        for (NSArray *subList in [subFolderState objectForKey:@"iconLists"]) {
+                            [orphanedIcons_ addObjectsFromArray:subList];
+                        }
 
-                if (isRootFolder || hasSubfolderSupport_) {
-                    // Insert fixed-up folder in place of old folder
-                    [oldList insertObject:newItem atIndex:i];
-                } else {
-                    // Subfolders not supported; orphan the icons for redistribution
-                    for (NSArray *subList in [newItem objectForKey:@"iconLists"]) {
-                        [orphanedIcons addObjectsFromArray:subList];
+                        // As the removed folder was not replaced, must decrement icon count and counter
+                        numOfIcons--;
+                        i--;
                     }
+                }
+            }
 
-                    // As we did not replace the removed folder, must decrement icon count and counter
-                    iconCount--;
-                    i--;
+            // Save the updated icon list
+            [iconLists addObject:iconList];
+            [iconList release];
+        }
+
+        // Add any orphaned icons as a single list to end of folder
+        [iconLists addObject:[NSArray arrayWithArray:orphanedIcons_]];
+        [orphanedIcons_ removeAllObjects];
+
+        // Compact lists down to allowed maximum number of lists for this folder
+        // NOTE: Lists are mutable as they were created as such, above.
+        unsigned int numOfIconLists = [iconLists count];
+        for (unsigned int i = (numOfIconLists - 1); (int)i > (maxLists - 1) && i > 0; i--) {
+            // Add icons from this list to end of previous list
+            NSMutableArray *thisList = [iconLists objectAtIndex:i];
+            NSMutableArray *prevList = [iconLists objectAtIndex:(i - 1)];
+            [prevList addObjectsFromArray:thisList];
+
+            // Remove this list
+            [iconLists removeObjectAtIndex:i];
+        }
+
+        // Ensure that lists don't contain more than allowed maximum number of icons
+        numOfIconLists = [iconLists count];
+        for (unsigned int i = 0; i < numOfIconLists; i++) {
+            NSMutableArray *thisList = [iconLists objectAtIndex:i];
+            unsigned int numOfIcons = [thisList count];
+            if ((int)numOfIcons > maxIcons) {
+                // This list has too many icons; remove surplus icons
+                NSRange range = NSMakeRange(maxIcons, numOfIcons - maxIcons);
+                NSArray *surplusIcons = [thisList subarrayWithRange:range];
+                [thisList removeObjectsInRange:range];
+
+                // Decide what to do with surplus icons
+                unsigned int nextListIndex = i + 1;
+                if (nextListIndex < numOfIconLists) {
+                    // Following list exists; move surplus icons to it
+                    NSMutableArray *nextList = [iconLists objectAtIndex:nextListIndex];
+                    NSMutableArray *mergedList = [NSMutableArray arrayWithArray:surplusIcons];
+                    [mergedList addObjectsFromArray:nextList];
+                    [iconLists replaceObjectAtIndex:nextListIndex withObject:mergedList];
+                } else {
+                    // No more lists; move surplus icons to new list, if allowed
+                    if ((int)numOfIconLists < maxLists) {
+                        // Add surplus icons as new list
+                        // NOTE: List will be processed by next iteration of this loop.
+                        [iconLists addObject:[NSMutableArray arrayWithArray:surplusIcons]];
+                        numOfIconLists++;
+                    } else {
+                        // List limit reached; add surplus icons to orphaned icons list
+                        [orphanedIcons_ addObjectsFromArray:surplusIcons];
+                    }
                 }
             }
         }
 
-        // If list is too large (icons > maxIcons), split into smaller lists
-        while ((int)iconCount > maxIcons) {
-            // NOTE: Must make sure list limit has not been reached.
-            if ((int)newListCount >= maxLists)
-                break;
-
-            // Create a new icon list containing the allowed number of icons
-            // NOTE: Make new list mutable so icons can be added later (if necessary).
-            NSRange range = NSMakeRange(0, maxIcons);
-            NSArray *newList = [[oldList subarrayWithRange:range] mutableCopy];
-            [newIconLists addObject:newList];
-            [newList release];
-            newListCount++;
-
-            // Remove from old list the icons used in new list
-            [oldList removeObjectsInRange:range];
-            iconCount -= maxIcons;
-        }
-
-        if (iconCount > 0) {
-            // Leftover icons exist
-            if ((int)newListCount < maxLists) {
-                // List limit not reached; add leftovers as final list
-                [newIconLists addObject:oldList];
-                newListCount++;
-            } else {
-                // List limit reached; add leftovers to orphaned list
-                [orphanedIcons addObjectsFromArray:oldList];
-            }
-        }
-
-        [oldList release];
-    }
-
-    // Redistribute orphaned icons
-    unsigned int orphanCount = [orphanedIcons count];
-    if (orphanCount > 0) {
-        // Iterate backwards through lists, adding icons as space permits
-        for (NSMutableArray *list in [newIconLists reverseObjectEnumerator]) {
-            unsigned int iconCount = [list count];
-            if ((int)iconCount < maxIcons) {
-                // This list has room for more icons
-                int length = maxIcons - iconCount;
-                if (length > (int)orphanCount)
-                    length = orphanCount;
-                NSRange range = NSMakeRange(0, length);
-                [list addObjectsFromArray:[orphanedIcons subarrayWithRange:range]];
-
-                // Remove now no-longer-orphaned icons from orphan list
-                [orphanedIcons removeObjectsInRange:range];
-                orphanCount -= range.length;
-            }
-
-            if (orphanCount == 0)
-                // No more orphans
-                break;
+        // If this is the root folder or the dock, free the global orphaned icons array
+        // NOTE: Any remaining icons will be lost in the ether
+        //       (but still accessible via Spotlight).
+        if (isRootFolder || isDock) {
+            [orphanedIcons_ release];
+            orphanedIcons_ = nil;
         }
     }
 
-    // If icon lists array is empty, add a single empty list
-    // NOTE: This can happen for the dock when it contains no icons.
-    // XXX: Can this happen for anything *besides* the dock?
-    if ([newIconLists count] == 0) {
-        [newIconLists addObject:[NSArray array]];
-    }
-
-    // Store the updated icon lists
-    [newState setObject:newIconLists forKey:@"iconLists"];
-
-    return newState;
+    // Return updated folder state
+    // NOTE: Must copy original state to include display name and (if root folder) the dock.
+    NSMutableDictionary *updatedFolderState = [NSMutableDictionary dictionaryWithDictionary:folderState];
+    [updatedFolderState setObject:iconLists forKey:@"iconLists"];
+    return updatedFolderState;
 }
 
-static BOOL needsConversion_ = NO;
+static NSDictionary * repairIconState(NSDictionary *iconState) {
+    // Update icon lists for the dock
+    // NOTE: Wrap the array in a fake folder in order to pass to update function.
+    // XXX: This code assumes that the dock never has more than one icon list.
+    NSArray *dock = [NSArray arrayWithObject:[iconState objectForKey:@"buttonBar"]];
+    NSDictionary *folder = [NSDictionary dictionaryWithObject:dock forKey:@"iconLists"];
+    dock = [repairFolderIconState(folder, NO, YES) objectForKey:@"iconLists"];
 
-static NSDictionary * fixupIconState(NSDictionary *iconState) {
-    // If necessary, fix icon state to make sure there are no lost icons
-    if (needsConversion_) {
-        // Fix dock
-        // NOTE: Wrap the array in a fake folder in order to pass to fixup function.
-        // XXX: This code assumes that the dock never has more than one icon list.
-        NSArray *dock = [NSArray arrayWithObject:[iconState objectForKey:@"buttonBar"]];
-        NSDictionary *folder = [NSDictionary dictionaryWithObject:dock forKey:@"iconLists"];
-        dock = [fixupFolderState(folder, NO, YES) objectForKey:@"iconLists"];
+    // Update icon lists for the root folder
+    iconState = repairFolderIconState(iconState, YES, NO);
 
-        // Fix icon lists
-        iconState = fixupFolderState(iconState, YES, NO);
-        needsConversion_ = NO;
-
-        // Combine fixed dock and lists
-        iconState = [[iconState mutableCopy] autorelease];
-        [(NSMutableDictionary *)iconState setObject:[dock lastObject] forKey:@"buttonBar"];
-
-        ISLog(@"Converted icon state for new combination of extensions.");
-    }
+    // Combine fixed dock and lists
+    iconState = [[iconState mutableCopy] autorelease];
+    [(NSMutableDictionary *)iconState setObject:[dock lastObject] forKey:@"buttonBar"];
 
     return iconState;
 }
@@ -311,6 +318,8 @@ static NSDictionary * fixupIconState(NSDictionary *iconState) {
 }
 
 // 4.x - 5.x
+static BOOL needsConversion_ = NO;
+
 %group GFirmware4x5x
 
 - (id)iconStatePath {
@@ -412,7 +421,12 @@ static NSDictionary * fixupIconState(NSDictionary *iconState) {
 }
 
 - (id)_iconState:(BOOL)ignoreDesiredIconStateFile {
-    return fixupIconState(%orig);
+    id result = %orig;
+    if (needsConversion_) {
+        result = repairIconState(result);
+        needsConversion_ = NO;
+    }
+    return result;
 }
 
 %end // GFirmware5x
@@ -421,7 +435,12 @@ static NSDictionary * fixupIconState(NSDictionary *iconState) {
 %group GFirmware4x
 
 - (id)_iconState {
-    return fixupIconState(%orig);
+    id result = %orig;
+    if (needsConversion_) {
+        result = repairIconState(result);
+        needsConversion_ = NO;
+    }
+    return result;
 }
 
 %end // GFirmware4x
