@@ -35,6 +35,7 @@
 @interface SBIconModel : NSObject
 @property(readonly, retain) NSMutableArray *iconLists;
 @property(readonly, retain) SBButtonBar *buttonBar;
++ (id)sharedInstance;
 - (void)compactIconLists;
 - (id)iconState;
 - (void)noteIconStateChangedExternally;
@@ -73,6 +74,7 @@
 - (NSString *)extensionString;
 - (BOOL)addExtension:(NSString *)extension;
 - (BOOL)isBeingUsedByExtensions;
+- (void)repairAndReloadIconState;
 
 @end
 
@@ -82,6 +84,7 @@
 #define ISLog(...) 
 #endif
 
+static NSDictionary * repairIconState(NSDictionary *iconState);
 
 static ISIconSupport *sharedSupport;
 
@@ -126,6 +129,16 @@ __attribute__((constructor)) static void initISIconSupport() {
 
 - (BOOL)isBeingUsedByExtensions {
     return ![[self extensionString] isEqualToString:@""];
+}
+
+- (void)repairAndReloadIconState {
+    SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
+    id iconState = [iconModel iconState];
+    id newIconState = repairIconState(iconState);
+    if (![newIconState isEqual:iconState]) {
+        [newIconState writeToFile:[iconModel iconStatePath] atomically:YES];
+        [iconModel noteIconStateChangedExternally];
+    }
 }
 
 @end
