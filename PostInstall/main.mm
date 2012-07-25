@@ -1,7 +1,7 @@
 /**
  * Description: Post install script for IconSupport
  * Author: Lance Fetters (aka. ashikase)
- * Last-modified: 2012-01-25 15:27:24
+ * Last-modified: 2012-07-25 18:26:36
  */
 
 #define kCFCoreFoundationVersionNumber_iPhoneOS_4_0 550.32
@@ -9,6 +9,7 @@
 
 #define APP_ID "com.chpwn.iconsupport"
 #define STALE_FILE_KEY "hasOldStateFile"
+#define kFirstLoadAfterUpgrade @"firstLoadAfterUpgrade"
 
 int main(int argc, char *argv[]) {
     // Move old "IconSupportState-*****.plist" file to "IconSupportState.plist"
@@ -46,10 +47,16 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // If this is a fresh install (and not an upgrade), note if an old state file exists
-        if (argc > 1 && strcmp(argv[1], "install") == 0) {
-            if ([manager fileExistsAtPath:newPath]) {
-                CFPreferencesSetAppValue(CFSTR(STALE_FILE_KEY), [NSNumber numberWithBool:YES], CFSTR(APP_ID));
+        if (argc > 1) {
+            if (strcmp(argv[1], "install") == 0) {
+                // This is a fresh install; note if an old state file exists
+                if ([manager fileExistsAtPath:newPath]) {
+                    CFPreferencesSetAppValue(CFSTR(STALE_FILE_KEY), [NSNumber numberWithBool:YES], CFSTR(APP_ID));
+                    CFPreferencesAppSynchronize(CFSTR(APP_ID));
+                }
+            } else if (strcmp(argv[1], "upgrade") == 0) {
+                // Mark that an upgrade has occurred
+                CFPreferencesSetAppValue((CFStringRef)kFirstLoadAfterUpgrade, [NSNumber numberWithBool:YES], CFSTR(APP_ID));
                 CFPreferencesAppSynchronize(CFSTR(APP_ID));
             }
         }

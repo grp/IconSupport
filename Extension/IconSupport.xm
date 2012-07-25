@@ -18,6 +18,9 @@
 
 #include <substrate.h>
 
+#define APP_ID "com.chpwn.iconsupport"
+#define kFirstLoadAfterUpgrade @"firstLoadAfterUpgrade"
+
 // Horrible horrible way of going about doing it but it works /for now/
 #define isiPad() ([UIDevice instancesRespondToSelector:@selector(isWildcat)] && [[UIDevice currentDevice] isWildcat])
 
@@ -228,6 +231,42 @@ NSDictionary * repairIconState(NSDictionary *iconState) {
 static BOOL needsConversion_ = NO;
 
 %group GFirmware4x5x
+
+- (id)init {
+    // If IconSupport is installed but not in use and a user upgrades to 1.7.5,
+    // their old IconSupport layout file may overwrite their current icon layout
+    // without warning. The below code prevents this from occurring.
+    BOOL firstLoadAfterUpgrade = NO;
+    CFPropertyListRef propList = CFPreferencesCopyAppValue((CFStringRef)kFirstLoadAfterUpgrade, CFSTR(APP_ID));
+    if (propList != NULL) {
+        if (CFGetTypeID(propList) == CFBooleanGetTypeID()) {
+            firstLoadAfterUpgrade = CFBooleanGetValue(reinterpret_cast<CFBooleanRef>(propList));
+        }
+        CFRelease(propList);
+    }
+
+    if (firstLoadAfterUpgrade) {
+        // IconSupport has just been upgraded
+        NSString *hash = [[ISIconSupport sharedInstance] extensionString];
+        if ([hash isEqualToString:@""]) {
+            // IconSupport is installed but not in use
+            // NOTE: If all IconSupport-enabled extensions were uninstalled
+            //       at the *same time* that IconSupport was upgraded,
+            //       *do not* delete the IconSupport layout file.
+            NSString *oldHash = [[NSUserDefaults standardUserDefaults] stringForKey:@"ISLastUsed"];
+            if ([oldHash isEqualToString:hash]) {
+                // IconSupport-enabled extensions were not just uninstalled; delete layout file
+                [[NSFileManager defaultManager] removeItemAtPath:@"/var/mobile/Library/SpringBoard/IconSupportState.plist" error:NULL];
+            }
+        }
+
+        // Save fact that first load has completed
+        CFPreferencesSetAppValue((CFStringRef)kFirstLoadAfterUpgrade, NULL, CFSTR(APP_ID));
+        CFPreferencesAppSynchronize(CFSTR(APP_ID));
+    }
+
+    return %orig;
+}
 
 - (id)iconStatePath {
     NSString *defPath = %orig;
