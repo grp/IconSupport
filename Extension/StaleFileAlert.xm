@@ -1,7 +1,3 @@
-#define kCFCoreFoundationVersionNumber_iOS_4_3 550.58
-#define kCFCoreFoundationVersionNumber_iPhoneOS_4_0 550.32
-#define isiOS3 (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iPhoneOS_4_0)
-
 #define APP_ID "com.chpwn.iconsupport"
 #define STALE_FILE_KEY "hasOldStateFile"
 
@@ -79,7 +75,7 @@ static void showStaleFileMessageIfNecessary() {
 __attribute__((constructor)) static void init() {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
-    if (!isiOS3) {
+    if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_4_0) {
         // NOTE: This library should only be loaded for SpringBoard
         NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
         if ([bundleId isEqualToString:@"com.apple.springboard"]) {

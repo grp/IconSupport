@@ -1,6 +1,3 @@
-#define kCFCoreFoundationVersionNumber_iPhoneOS_4_0 550.32
-#define isiOS4 (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iPhoneOS_4_0)
-
 %hook ResetPrefController
 
 - (void)resetIconPositions:(id)sender {
@@ -13,7 +10,7 @@
 
 __attribute__((constructor)) static void init()
 {
-    if (isiOS4) {
+    if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_4_0) {
         NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
         // NOTE: This library should only be loaded for Preferences.app (Settings)

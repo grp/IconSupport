@@ -1,11 +1,8 @@
 /**
  * Description: Post install script for IconSupport
  * Author: Lance Fetters (aka. ashikase)
- * Last-modified: 2012-07-25 18:26:36
+ * Last-modified: 2012-07-27 01:54:12
  */
-
-#define kCFCoreFoundationVersionNumber_iPhoneOS_4_0 550.32
-#define isPreIOS4 (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iPhoneOS_4_0)
 
 #define APP_ID "com.chpwn.iconsupport"
 #define STALE_FILE_KEY "hasOldStateFile"
@@ -15,7 +12,7 @@ int main(int argc, char *argv[]) {
     // Move old "IconSupportState-*****.plist" file to "IconSupportState.plist"
     // NOTE: This conversion is only needed for iOS 4.x+, as the 3.x code for
     //       IconSupport still uses hash-postfixed plist files.
-    if (!isPreIOS4) {
+    if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_4_0) {
         // NOTE: This program is run as root during install; must switch the
         //       effective user to mobile (501).
         seteuid(501);

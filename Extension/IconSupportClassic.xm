@@ -5,8 +5,6 @@
 
 #import "ISIconSupport.h"
 
-#define kCFCoreFoundationVersionNumber_iPhoneOS_4_0 550.32
-
 // Horrible horrible way of going about doing it but it works /for now/
 #define isiPad() ([UIDevice instancesRespondToSelector:@selector(isWildcat)] && [[UIDevice currentDevice] isWildcat])
 
@@ -178,7 +176,7 @@ __attribute__((constructor)) static void init()
     // NOTE: This library should only be loaded for SpringBoard
     NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
     if ([bundleId isEqualToString:@"com.apple.springboard"]) {
-        if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iPhoneOS_4_0) {
+        if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_0) {
             // Firmware is iOS 3 or older
             // NOTE: IconSupport does not support firmware older than iOS 3.
             %init;

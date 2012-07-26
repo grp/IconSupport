@@ -4,9 +4,6 @@
 
 #include <substrate.h>
 
-#define kCFCoreFoundationVersionNumber_iPhoneOS_4_0 550.32
-#define kCFCoreFoundationVersionNumber_iPhoneOS_5_0 674.0
-
 #define APP_ID "com.chpwn.iconsupport"
 #define kFirstLoadAfterUpgrade @"firstLoadAfterUpgrade"
 
@@ -373,12 +370,12 @@ __attribute__((constructor)) static void init()
     // NOTE: This library should only be loaded for SpringBoard
     NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
     if ([bundleId isEqualToString:@"com.apple.springboard"]) {
-        if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iPhoneOS_4_0) {
+        if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_4_0) {
             // Firmware is iOS 4 or newer
             %init;
 
             // Initialize firmware-dependent hooks
-            if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iPhoneOS_5_0) {
+            if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_5_0) {
                 // iOS 4
                 %init(GFirmware4x);
             } else {
