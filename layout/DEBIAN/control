@@ -7,7 +7,7 @@ Package: com.chpwn.iconsupport
 Pre-Depends: firmware (>= 3.0), firmware (<< 6.0)
 Depends: mobilesubstrate, jp.ashikase.bugfix.stuckpages, jp.ashikase.bugfix.duplicateicons
 Section: Development
-Version: 1.7.6.1
+Version: 1.7.6.2
 Architecture: iphoneos-arm
 Description: Support library for safe icon tweaks.
 Sponsor: thebigboss.org <http://thebigboss.org>
