@@ -233,9 +233,12 @@ static BOOL needsConversion_ = NO;
 %group GFirmware4x5x
 
 - (id)init {
-    // If IconSupport is installed but not in use and a user upgrades to 1.7.5,
-    // their old IconSupport layout file may overwrite their current icon layout
-    // without warning. The below code prevents this from occurring.
+    // Upon upgrading IconSupport, if a user has an IconSupportState.plist
+    // file but no IconSupport-enabled extensions, must rename plist file to
+    // IconState.plist.
+    // NOTE: Prior to version 1.7.5, IconSupport always used IconSupportState.plist,
+    // even when no IconSupport-enabled extensions were in use. Since 1.7.5,
+    // IconSupport will now use IconState.plist in that situation.
     BOOL firstLoadAfterUpgrade = NO;
     CFPropertyListRef propList = CFPreferencesCopyAppValue((CFStringRef)kFirstLoadAfterUpgrade, CFSTR(APP_ID));
     if (propList != NULL) {
@@ -247,16 +250,22 @@ static BOOL needsConversion_ = NO;
 
     if (firstLoadAfterUpgrade) {
         // IconSupport has just been upgraded
-        NSString *hash = [[ISIconSupport sharedInstance] extensionString];
-        if ([hash isEqualToString:@""]) {
-            // IconSupport is installed but not in use
-            // NOTE: If all IconSupport-enabled extensions were uninstalled
-            //       at the *same time* that IconSupport was upgraded,
-            //       *do not* delete the IconSupport layout file.
-            NSString *oldHash = [[NSUserDefaults standardUserDefaults] stringForKey:@"ISLastUsed"];
-            if ([oldHash isEqualToString:hash]) {
-                // IconSupport-enabled extensions were not just uninstalled; delete layout file
-                [[NSFileManager defaultManager] removeItemAtPath:@"/var/mobile/Library/SpringBoard/IconSupportState.plist" error:NULL];
+        if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
+            // No IconSupport-enabled extensions are loaded
+            // FIXME: Avoid hard-coding paths, as they may change in future firmware.
+            NSFileManager *manager = [NSFileManager defaultManager];
+            NSString *basePath = @"/var/mobile/Library/SpringBoard";
+            NSString *path = [basePath stringByAppendingString:@"/IconSupportState.plist"];
+            if ([manager fileExistsAtPath:path]) {
+                // Move IconSupport state file to default state file
+                NSString *defPath = [basePath stringByAppendingString:@"/IconState.plist"];
+                BOOL success = [manager removeItemAtPath:defPath error:NULL];
+                if (success) {
+                    success = [manager copyItemAtPath:path toPath:defPath error:NULL];
+                    if (success) {
+                        [manager removeItemAtPath:path error:NULL];
+                    }
+                }
             }
         }
 
