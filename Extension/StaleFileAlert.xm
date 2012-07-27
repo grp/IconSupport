@@ -1,16 +1,6 @@
 #include "PreferenceConstants.h"
 
-@interface SBAlertItem : NSObject <UIAlertViewDelegate>
-@property(readonly, retain) UIAlertView *alertSheet;
-@end
-
 @interface ISStaleFileAlertItem : SBAlertItem @end
-
-
-@interface SBAlertItemsController : NSObject
-+ (id)sharedInstance;
-- (void)activateAlertItem:(id)item;
-@end
 
 %hook ISStaleFileAlertItem
 
@@ -20,15 +10,10 @@
     CFPreferencesSetAppValue((CFStringRef)kHasOldStateFile, [NSNumber numberWithBool:NO], CFSTR(APP_ID));
     CFPreferencesAppSynchronize(CFSTR(APP_ID));
 
-    switch (buttonIndex) {
-        case 0:
-            // Delete the file and force a restart
-            [[NSFileManager defaultManager] removeItemAtPath:@"/var/mobile/Library/SpringBoard/IconSupportState.plist" error:NULL];
-            exit(0);
-            break;
-
-        default:
-            break;
+    if (buttonIndex == 0) {
+        // Delete the file and force a restart
+        [[NSFileManager defaultManager] removeItemAtPath:@"/var/mobile/Library/SpringBoard/IconSupportState.plist" error:NULL];
+        exit(0);
     }
 }
 
@@ -72,9 +57,10 @@ static void showStaleFileMessageIfNecessary() {
 %end %end
 
 __attribute__((constructor)) static void init() {
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
+    // Only hook for iOS 4 or newer
     if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_4_0) {
+        NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+
         // NOTE: This library should only be loaded for SpringBoard
         NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
         if ([bundleId isEqualToString:@"com.apple.springboard"]) {
@@ -95,7 +81,9 @@ __attribute__((constructor)) static void init() {
                 }
             }
         }
-    }
 
-    [pool release];
+        [pool release];
+    }
 }
+
+/* vim: set filetype=objcpp sw=4 ts=4 expandtab tw=80 ff=unix: */

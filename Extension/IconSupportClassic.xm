@@ -19,10 +19,11 @@
 static id representation(id iconListOrDock) {
     // Returns a dictionary representation of an icon list or dock,
     // as it varies depending on the OS version installed.
-    if ([iconListOrDock respondsToSelector:@selector(representation)])
+    if ([iconListOrDock respondsToSelector:@selector(representation)]) {
         return [iconListOrDock performSelector:@selector(representation)];
-    else if ([iconListOrDock respondsToSelector:@selector(dictionaryRepresentation)])
+    } else if ([iconListOrDock respondsToSelector:@selector(dictionaryRepresentation)]) {
         return [iconListOrDock performSelector:@selector(dictionaryRepresentation)];
+    }
 
     return nil;
 }
@@ -35,21 +36,24 @@ static id representation(id iconListOrDock) {
 }
 
 - (id)iconState {
-    if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
+    ISIconSupport *iconSupport = [ISIconSupport sharedInstance];
+    if (![iconSupport isBeingUsedByExtensions]) {
         return %orig;
     }
 
-    NSDictionary *previousIconState = MSHookIvar<NSDictionary *>(self, "_previousIconState");
     id ret = nil;
 
-    if (previousIconState == nil) {
-        NSMutableDictionary *springBoardPlist = [[NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist"] mutableCopy];
-        id newIconState = [[springBoardPlist objectForKey:[@"iconState" stringByAppendingString:[[ISIconSupport sharedInstance] extensionString]]] mutableCopy];
-
-        // If we has a layout saved already, go ahead and return that.
-        if (newIconState) {   
-            ret = [newIconState autorelease];
-        } else if ([springBoardPlist objectForKey:@"ISLastUsed"]) { // We have a last used icon state, lets use it
+    NSDictionary *_previousIconState = MSHookIvar<NSDictionary *>(self, "_previousIconState");
+    if (_previousIconState == nil) {
+        NSMutableDictionary *springBoardPlist = [[NSMutableDictionary alloc] initWithContentsOfFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist"];
+        NSString *extensionString = [iconSupport extensionString];
+        id newIconState = [springBoardPlist objectForKey:[@"iconState" stringByAppendingString:extensionString]];
+        if (newIconState) {
+            // We have a layout saved already, go ahead and return that.
+            // FIXME: Must it be mutable?
+            ret = [[newIconState mutableCopy] autorelease];
+        } else if ([springBoardPlist objectForKey:@"ISLastUsed"]) {
+            // We have a last used icon state, lets use it
             NSString *oldKeySuffix = [springBoardPlist objectForKey:@"ISLastUsed"];
 
             // Lets go on a serach for icon states...
@@ -58,14 +62,16 @@ static id representation(id iconListOrDock) {
             if (!oldIconState) oldIconState = [springBoardPlist objectForKey:@"iconState-fcsb"];
             if (!oldIconState) oldIconState = [springBoardPlist objectForKey:@"iconState"];
 
-            // Oh, we found one? Great, lets set as the current one and return it.
             if (oldIconState) {
-                [springBoardPlist setObject:[[ISIconSupport sharedInstance] extensionString] forKey:@"ISLastUsed"];
+                // Oh, we found one? Great, lets set as the current one and return it.
+                [springBoardPlist setObject:extensionString forKey:@"ISLastUsed"];
+
                 // Save to the current key for next time.
                 [springBoardPlist writeToFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist" atomically:YES];
-                ret = [oldIconState autorelease];
+                ret = oldIconState;
             }
         }
+        [springBoardPlist release];
     }
 
     // If ret is still nil, just get whatever SpringBoard wants
@@ -73,7 +79,8 @@ static id representation(id iconListOrDock) {
 }
 
 - (void)_writeIconState {
-    if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
+    ISIconSupport *iconSupport = [ISIconSupport sharedInstance];
+    if (![iconSupport isBeingUsedByExtensions]) {
         %orig;
         return;
     }
@@ -90,10 +97,11 @@ static id representation(id iconListOrDock) {
     [lists release];
 
     NSMutableDictionary *springBoardPlist = [[NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist"] mutableCopy];
-    [springBoardPlist setObject:newState forKey:[@"iconState" stringByAppendingString:[[ISIconSupport sharedInstance] extensionString]]];
-    [springBoardPlist setObject:[[ISIconSupport sharedInstance] extensionString] forKey:@"ISLastUsed"];
+    NSString *extensionString = [iconSupport extensionString];
+    [springBoardPlist setObject:newState forKey:[@"iconState" stringByAppendingString:extensionString]];
     [newState release];
 
+    [springBoardPlist setObject:extensionString forKey:@"ISLastUsed"];
     [springBoardPlist writeToFile:@"/var/mobile/Library/Preferences/com.apple.springboard.plist" atomically:YES];
     [springBoardPlist release];
 }
@@ -101,8 +109,9 @@ static id representation(id iconListOrDock) {
 - (id)exportState {
     NSArray *originalState = %orig;
 
-    if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
+    if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
         return originalState;
+    }
 
     // Extract the dock and keep it identical
     NSArray *dock = [originalState objectAtIndex:0];
@@ -113,8 +122,9 @@ static id representation(id iconListOrDock) {
     for (NSArray *page in iconLists) {
         for (NSArray *row in page) {
             for (id iconDict in row) {
-                if ([iconDict isKindOfClass:[NSDictionary class]])
+                if ([iconDict isKindOfClass:[NSDictionary class]]) {
                     [holdAllIcons addObject:iconDict];
+                }
             }
         }
     }
@@ -169,19 +179,20 @@ static id representation(id iconListOrDock) {
 
 %end // SBIconModel
 
-__attribute__((constructor)) static void init()
-{
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+__attribute__((constructor)) static void init() {
+    // Only hook for iOS 3
+    if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_0) {
+        NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
-    // NOTE: This library should only be loaded for SpringBoard
-    NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
-    if ([bundleId isEqualToString:@"com.apple.springboard"]) {
-        if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_0) {
-            // Firmware is iOS 3 or older
+        // NOTE: This library should only be loaded for SpringBoard
+        NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
+        if ([bundleId isEqualToString:@"com.apple.springboard"]) {
             // NOTE: IconSupport does not support firmware older than iOS 3.
             %init;
         }
-    }
 
-    [pool release];
+        [pool release];
+    }
 }
+
+/* vim: set filetype=objcpp sw=4 ts=4 expandtab tw=80 ff=unix: */

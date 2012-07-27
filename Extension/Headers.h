@@ -5,6 +5,16 @@
 - (BOOL)isWildcat;
 @end
 
+@interface SBAlertItem : NSObject <UIAlertViewDelegate>
+// NOTE: In iOS 3, this property is a UIModalView.
+@property(readonly, retain) UIAlertView *alertSheet;
+@end
+
+@interface SBAlertItemsController : NSObject
++ (id)sharedInstance;
+- (void)activateAlertItem:(id)item;
+@end
+
  // iOS 3.x
 @class SBButtonBar;
 

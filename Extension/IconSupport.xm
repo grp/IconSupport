@@ -25,7 +25,7 @@ static BOOL hasSubfolderSupport_ = NO;
 static NSMutableArray *orphanedIcons_ = nil;
 
 static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRootFolder, BOOL isDock) {
-    NSMutableArray *iconLists = [NSMutableArray array];
+    NSMutableArray *iconLists = [[NSMutableArray alloc] init];
 
     NSArray *currentIconLists = [folderState objectForKey:@"iconLists"];
     if ([currentIconLists count] == 0) {
@@ -163,16 +163,20 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRo
     // NOTE: Must copy original state to include display name and (if root folder) the dock.
     NSMutableDictionary *updatedFolderState = [NSMutableDictionary dictionaryWithDictionary:folderState];
     [updatedFolderState setObject:iconLists forKey:@"iconLists"];
+    [iconLists release];
     return updatedFolderState;
 }
 
+// NOTE: This function cannot be static as it is accessed by other source files.
+//       It is constrained to this dylib by using the fvisibility=hidden flag.
 NSDictionary * repairIconState(NSDictionary *iconState) {
     // Update icon lists for the dock
     // NOTE: Wrap the array in a fake folder in order to pass to update function.
     // XXX: This code assumes that the dock never has more than one icon list.
-    NSArray *dock = [NSArray arrayWithObject:[iconState objectForKey:@"buttonBar"]];
-    NSDictionary *folder = [NSDictionary dictionaryWithObject:dock forKey:@"iconLists"];
+    NSArray *dock = [[NSArray alloc] initWithObject:[iconState objectForKey:@"buttonBar"]];
+    NSDictionary *folder = [[NSDictionary alloc] initWithObjectsAndKeys:dock, @"iconLists", nil];
     dock = [repairFolderIconState(folder, NO, YES) objectForKey:@"iconLists"];
+    [folder release];
 
     // Update icon lists for the root folder
     iconState = repairFolderIconState(iconState, YES, NO);
@@ -180,6 +184,7 @@ NSDictionary * repairIconState(NSDictionary *iconState) {
     // Combine fixed dock and lists
     iconState = [[iconState mutableCopy] autorelease];
     [(NSMutableDictionary *)iconState setObject:[dock lastObject] forKey:@"buttonBar"];
+    [dock release];
 
     return iconState;
 }
@@ -243,7 +248,6 @@ static BOOL needsConversion_ = NO;
 
     NSString *basePath = [defPath stringByDeletingLastPathComponent];
     NSString *path = [basePath stringByAppendingString:@"/IconSupportState.plist"];
-    NSFileManager *manager = [NSFileManager defaultManager];
 
     // Compare the previous and new hash
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -252,6 +256,7 @@ static BOOL needsConversion_ = NO;
     ISLog(@"Old hash is: %@, new hash is: %@", oldHash, newHash);
 
     // NOTE: This should only be possible once (at respring).
+    NSFileManager *manager = [NSFileManager defaultManager];
     if (![newHash isEqualToString:oldHash]) {
         // If no IconSupport-using extensions are loaded, rename the state file
         if ([newHash isEqualToString:@""] && [manager fileExistsAtPath:path]) {
@@ -273,6 +278,7 @@ static BOOL needsConversion_ = NO;
     }
 
     if ([newHash isEqualToString:@""]) {
+        // No IconSupport-enabled extensions are in use; use default path
         path = defPath;
     } else if (![manager fileExistsAtPath:path]) {
         // IconSupport state file does not exist; use default (Safe Mode) file
@@ -286,36 +292,49 @@ static BOOL needsConversion_ = NO;
 - (id)exportState:(BOOL)withFolders {
     NSArray *origState = %orig;
 
-    if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions])
+    if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
         return origState;
+    }
 
-    // Extract dock, keep it identical
-    NSArray *dock = [origState objectAtIndex:0];
+    // Add dock, unmodified,  to exported state
+    NSMutableArray *newState = [NSMutableArray array];
+    [newState addObject:[origState objectAtIndex:0]];
 
-    // Hold all icons' dict representations
-    NSMutableArray *holder = [NSMutableArray array];
-    NSArray *iconLists = [origState subarrayWithRange:NSMakeRange(1, [origState count]-1)];
-    for (NSArray *iL in iconLists)
-        for (NSDictionary *icon in iL)
-            if ([icon objectForKey:@"iconLists"])
-                // Flatten folders, this is to avoid issues with Infinifolders
-                for (NSArray *whatTheFuckIsThisShit in [icon objectForKey:@"iconLists"])
-                    for (NSDictionary *realIcon in whatTheFuckIsThisShit)
-                        [holder addObject:realIcon];
-            else
-                [holder addObject:icon];
+    // Collect icons from root folder and all subfolders
+    NSMutableArray *rootFolderIcons = [[NSMutableArray alloc] init];
+    NSArray *iconLists = [origState subarrayWithRange:NSMakeRange(1, [origState count] - 1)];
+    for (NSArray *iconList in iconLists) {
+        for (NSDictionary *icon in iconList) {
+            NSArray *folderIconLists = [icon objectForKey:@"iconLists"];
+            if (folderIconLists != nil) {
+                // Is a folder
+                // NOTE: Must flatten to avoid issues with extensions that
+                //       modify the number of icons/lists that folders can hold.
+                for (NSArray *folderIconList in folderIconLists) {
+                    [rootFolderIcons addObjectsFromArray:folderIconList];
+                }
+            } else {
+                // Is not a folder
+                [rootFolderIcons addObject:icon];
+            }
+        }
+    }
 
     // Split into pages of 16
-    NSMutableArray *newState = [NSMutableArray array];
-    [newState addObject:dock];
-    while ([holder count] > kISiPhoneDefaultMaxIconsPerPage) {
+    // FIXME: Need to update for iPad?
+    while ([rootFolderIcons count] > kISiPhoneDefaultMaxIconsPerPage) {
         NSRange range = NSMakeRange(0, kISiPhoneDefaultMaxIconsPerPage);
-        NSArray *page = [holder subarrayWithRange:range];
+        NSArray *page = [rootFolderIcons subarrayWithRange:range];
         [newState addObject:page];
-        [holder removeObjectsInRange:range];
+        [rootFolderIcons removeObjectsInRange:range];
     }
-    if ([holder count] > 0)
-        [newState addObject:holder];
+
+    // If root folder is not empty, add to exported icon state
+    if ([rootFolderIcons count] > 0) {
+        [newState addObject:rootFolderIcons];
+    }
+    [rootFolderIcons release];
+
     return newState;
 }
 
@@ -361,15 +380,14 @@ static BOOL needsConversion_ = NO;
 
 %end // SBIconModel
 
-__attribute__((constructor)) static void init()
-{
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+__attribute__((constructor)) static void init() {
+    // Only hook for iOS 4 or newer
+    if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_4_0) {
+        NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
-    // NOTE: This library should only be loaded for SpringBoard
-    NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
-    if ([bundleId isEqualToString:@"com.apple.springboard"]) {
-        if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_4_0) {
-            // Firmware is iOS 4 or newer
+        // NOTE: This library should only be loaded for SpringBoard
+        NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
+        if ([bundleId isEqualToString:@"com.apple.springboard"]) {
             %init;
 
             // Initialize firmware-dependent hooks
@@ -387,7 +405,9 @@ __attribute__((constructor)) static void init()
                 [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FolderEnhancer.dylib"] ||
                 [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FoldersInFolders.dylib"];
         }
-    }
 
-    [pool release];
+        [pool release];
+    }
 }
+
+/* vim: set filetype=objcpp sw=4 ts=4 expandtab tw=80 ff=unix: */

@@ -4,7 +4,7 @@
 
 NSDictionary * repairIconState(NSDictionary *iconState);
 
-static ISIconSupport *sharedSupport;
+static ISIconSupport *sharedSupport = nil;
 
 @implementation ISIconSupport
 
@@ -17,8 +17,12 @@ static ISIconSupport *sharedSupport;
     if (self != nil) {
         extensions = [[NSMutableSet alloc] init];
     }
-
     return self;
+}
+
+- (void)dealloc {
+    [extensions release];
+    [super dealloc];
 }
 
 - (NSString *)extensionString {
@@ -26,7 +30,7 @@ static ISIconSupport *sharedSupport;
         return @"";
     }
 
-    // Ensure it is unique for a certain set of extensions
+    // Every combination of extensions must produce a unique extension string
     int result = 0;
     for (NSString *extension in extensions) {
         result |= [extension hash];
@@ -36,7 +40,7 @@ static ISIconSupport *sharedSupport;
 }
 
 - (BOOL)addExtension:(NSString *)extension {
-    if (!extension || [extensions containsObject:extension]) {
+    if (extension == nil || [extensions containsObject:extension]) {
         return NO;
     }
 
@@ -62,7 +66,13 @@ static ISIconSupport *sharedSupport;
 
 __attribute__((constructor)) static void initISIconSupport() {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    sharedSupport = [[ISIconSupport alloc] init];
+
+    // NOTE: This library should only be loaded for SpringBoard
+    NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
+    if ([bundleId isEqualToString:@"com.apple.springboard"]) {
+        sharedSupport = [[ISIconSupport alloc] init];
+    }
+
     [pool release];
 }
 
