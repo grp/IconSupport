@@ -1,25 +1,31 @@
 #ifndef ICONSUPPORT_HEADERS_H_
 #define ICONSUPPORT_HEADERS_H_
 
-// iOS 3.x
+@interface UIDevice (UIDevicePrivate)
+- (BOOL)isWildcat;
+@end
+
+ // iOS 3.x
 @class SBButtonBar;
+
 @interface SBIconModel : NSObject
-@property(readonly, retain) NSMutableArray *iconLists;
-@property(readonly, retain) SBButtonBar *buttonBar;
 + (id)sharedInstance;
-- (void)compactIconLists;
 - (id)iconState;
 - (void)noteIconStateChangedExternally;
+@end
+@interface SBIconModel (Firmware_LT_40)
+@property(readonly, retain) SBButtonBar *buttonBar;
+@property(readonly, retain) NSMutableArray *iconLists;
+- (void)compactIconLists;
 @end
 @interface SBIconModel (Firmware_GTE_40)
 - (id)iconStatePath;
 @end
 
-// iOS 4.x
-@interface UIDevice (UIDevicePrivate)
-- (BOOL)isWildcat;
-@end
+ // iOS 3.x
+@interface SBIconList : NSObject @end
 
+// iOS 4.x+
 @interface SBFolder : NSObject
 + (int)maxListCount;
 - (Class)listModelClass;
@@ -28,13 +34,13 @@
 - (id)dockModel;
 @end
 
-@interface SBIconList : NSObject @end
-
+// iOS 4.x+
 @interface SBIconListModel : NSObject
 + (int)maxIcons;
 @end
 @interface SBDockIconListModel : SBIconListModel @end
 
+// iOS 4.x+
 @class SBFolderIcon;
 
 #endif // ICONSUPPORT_HEADERS_H_
