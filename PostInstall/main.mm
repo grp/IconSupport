@@ -1,10 +1,9 @@
 /**
  * Description: Post install script for IconSupport
  * Author: Lance Fetters (aka. ashikase)
- * Last-modified: 2012-07-27 01:54:12
+ * Last-modified: 2012-07-27 19:13:09
  */
 
-#define APP_ID "com.chpwn.iconsupport"
 #define STALE_FILE_KEY "hasOldStateFile"
 #define kFirstLoadAfterUpgrade @"firstLoadAfterUpgrade"
 

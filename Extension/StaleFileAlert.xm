@@ -1,4 +1,3 @@
-#define APP_ID "com.chpwn.iconsupport"
 #define STALE_FILE_KEY "hasOldStateFile"
 
 @interface SBAlertItem : NSObject <UIAlertViewDelegate>

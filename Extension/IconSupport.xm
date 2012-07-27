@@ -4,7 +4,6 @@
 
 #include <substrate.h>
 
-#define APP_ID "com.chpwn.iconsupport"
 #define kFirstLoadAfterUpgrade @"firstLoadAfterUpgrade"
 
 #define kISiPhoneDefaultMaxIconsPerPage 16
