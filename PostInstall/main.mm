@@ -1,7 +1,7 @@
 /**
  * Description: Post install script for IconSupport
  * Author: Lance Fetters (aka. ashikase)
- * Last-modified: 2012-07-27 19:42:29
+ * Last-modified: 2012-07-27 20:03:06
  */
 
 #include "PreferenceConstants.h"
@@ -69,4 +69,4 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-/* vim: set filetype=objc sw=4 ts=4 sts=4 expandtab textwidth=80 ff=unix: */
+/* vim: set filetype=objc sw=4 ts=4 expandtab textwidth=80 ff=unix: */
