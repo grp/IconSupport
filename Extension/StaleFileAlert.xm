@@ -17,7 +17,7 @@
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
     // Save fact that this alert has been shown and handled
     // NOTE: Must do this beforehand, in case exit() is called.
-    CFPreferencesSetAppValue(CFSTR(STALE_FILE_KEY), [NSNumber numberWithBool:NO], CFSTR(APP_ID));
+    CFPreferencesSetAppValue((CFStringRef)kHasOldStateFile, [NSNumber numberWithBool:NO], CFSTR(APP_ID));
     CFPreferencesAppSynchronize(CFSTR(APP_ID));
 
     switch (buttonIndex) {
@@ -49,7 +49,7 @@
 
 static void showStaleFileMessageIfNecessary() {
     BOOL hasOldStateFile = NO;
-    CFPropertyListRef propList = CFPreferencesCopyAppValue(CFSTR(STALE_FILE_KEY), CFSTR(APP_ID));
+    CFPropertyListRef propList = CFPreferencesCopyAppValue((CFStringRef)kHasOldStateFile, CFSTR(APP_ID));
     if (propList) {
         if (CFGetTypeID(propList) == CFBooleanGetTypeID()) {
             hasOldStateFile = CFBooleanGetValue(reinterpret_cast<CFBooleanRef>(propList));

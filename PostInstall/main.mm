@@ -1,7 +1,7 @@
 /**
  * Description: Post install script for IconSupport
  * Author: Lance Fetters (aka. ashikase)
- * Last-modified: 2012-07-27 19:18:30
+ * Last-modified: 2012-07-27 19:25:16
  */
 
 #include "PreferenceConstants.h"
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
             if (strcmp(argv[1], "install") == 0) {
                 // This is a fresh install; note if an old state file exists
                 if ([manager fileExistsAtPath:newPath]) {
-                    CFPreferencesSetAppValue(CFSTR(STALE_FILE_KEY), [NSNumber numberWithBool:YES], CFSTR(APP_ID));
+                    CFPreferencesSetAppValue((CFStringRef)kHasOldStateFile, [NSNumber numberWithBool:YES], CFSTR(APP_ID));
                     CFPreferencesAppSynchronize(CFSTR(APP_ID));
                 }
             } else if (strcmp(argv[1], "upgrade") == 0) {
