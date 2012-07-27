@@ -3,8 +3,7 @@
 #import "ISIconSupport.h"
 
 #include <substrate.h>
-
-#define kFirstLoadAfterUpgrade @"firstLoadAfterUpgrade"
+#include "PreferenceConstants.h"
 
 #define kISiPhoneDefaultMaxIconsPerPage 16
 #define kISiPhoneDefaultColumnsPerPage 4

@@ -1,4 +1,4 @@
-#define STALE_FILE_KEY "hasOldStateFile"
+#include "PreferenceConstants.h"
 
 @interface SBAlertItem : NSObject <UIAlertViewDelegate>
 @property(readonly, retain) UIAlertView *alertSheet;

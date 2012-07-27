@@ -1,11 +1,10 @@
 /**
  * Description: Post install script for IconSupport
  * Author: Lance Fetters (aka. ashikase)
- * Last-modified: 2012-07-27 19:13:09
+ * Last-modified: 2012-07-27 19:18:30
  */
 
-#define STALE_FILE_KEY "hasOldStateFile"
-#define kFirstLoadAfterUpgrade @"firstLoadAfterUpgrade"
+#include "PreferenceConstants.h"
 
 int main(int argc, char *argv[]) {
     // Move old "IconSupportState-*****.plist" file to "IconSupportState.plist"
