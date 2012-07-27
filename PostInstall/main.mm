@@ -1,13 +1,12 @@
 /**
  * Description: Post install script for IconSupport
  * Author: Lance Fetters (aka. ashikase)
- * Last-modified: 2012-07-27 19:25:16
+ * Last-modified: 2012-07-27 19:42:29
  */
 
 #include "PreferenceConstants.h"
 
 int main(int argc, char *argv[]) {
-    // Move old "IconSupportState-*****.plist" file to "IconSupportState.plist"
     // NOTE: This conversion is only needed for iOS 4.x+, as the 3.x code for
     //       IconSupport still uses hash-postfixed plist files.
     if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_4_0) {
@@ -18,11 +17,17 @@ int main(int argc, char *argv[]) {
         // Create pool
         NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
-        // Make sure that a plist using the new name does not already exist
+        // File path for IconSupport icon state file
         NSString *basePath = @"/var/mobile/Library/SpringBoard/";
-        NSString *newPath = [basePath stringByAppendingString:@"IconSupportState.plist"];
+        NSString *stateFilePath = [basePath stringByAppendingString:@"IconSupportState.plist"];
+
+        // Rename any existing old-name-formatted icon state files
+        // NOTE: Versions prior to 1.7.2 used state file names of the format
+        //       "IconSupportState-*****.plist". Starting from 1.7.2, the state
+        //       file is simply named "IconSupportState.plist".
+        // NOTE: Do not overwrite IconSupportState.plist if it already exists.
         NSFileManager *manager = [NSFileManager defaultManager];
-        if (![manager fileExistsAtPath:newPath]) {
+        if (![manager fileExistsAtPath:stateFilePath]) {
             // Get the last used IconSupport hash (if it exists)
             NSDictionary *defaults = [[NSUserDefaults standardUserDefaults] persistentDomainForName:@"com.apple.springboard"];
             NSString *hash = [defaults objectForKey:@"ISLastUsed"];
@@ -33,19 +38,20 @@ int main(int argc, char *argv[]) {
                     // Move old state file to new path
                     // NOTE: Must do in two steps: copy file to new path, then remove old file.
                     // NOTE: If IconSupporState.plist already exists (it should not), it will not be overwritten.
-                    BOOL success = [manager copyItemAtPath:oldPath toPath:newPath error:NULL];
+                    BOOL success = [manager copyItemAtPath:oldPath toPath:stateFilePath error:NULL];
                     if (success) {
                         [manager removeItemAtPath:oldPath error:NULL];
-                        printf("Moved %s to %s\n", [oldPath UTF8String], [newPath UTF8String]);
+                        printf("Moved %s to %s\n", [oldPath UTF8String], [stateFilePath UTF8String]);
                     }
                 }
             }
         }
 
+        // Check whether this is an install or an upgrade
         if (argc > 1) {
             if (strcmp(argv[1], "install") == 0) {
                 // This is a fresh install; note if an old state file exists
-                if ([manager fileExistsAtPath:newPath]) {
+                if ([manager fileExistsAtPath:stateFilePath]) {
                     CFPreferencesSetAppValue((CFStringRef)kHasOldStateFile, [NSNumber numberWithBool:YES], CFSTR(APP_ID));
                     CFPreferencesAppSynchronize(CFSTR(APP_ID));
                 }
