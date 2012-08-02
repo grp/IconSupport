@@ -175,6 +175,7 @@ NSDictionary * repairIconState(NSDictionary *iconState) {
     // XXX: This code assumes that the dock never has more than one icon list.
     NSArray *dock = [[NSArray alloc] initWithObject:[iconState objectForKey:@"buttonBar"]];
     NSDictionary *folder = [[NSDictionary alloc] initWithObjectsAndKeys:dock, @"iconLists", nil];
+    [dock release];
     dock = [repairFolderIconState(folder, NO, YES) objectForKey:@"iconLists"];
     [folder release];
 
@@ -184,7 +185,6 @@ NSDictionary * repairIconState(NSDictionary *iconState) {
     // Combine fixed dock and lists
     iconState = [[iconState mutableCopy] autorelease];
     [(NSMutableDictionary *)iconState setObject:[dock lastObject] forKey:@"buttonBar"];
-    [dock release];
 
     return iconState;
 }
