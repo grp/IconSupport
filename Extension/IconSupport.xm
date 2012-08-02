@@ -170,21 +170,21 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRo
 // NOTE: This function cannot be static as it is accessed by other source files.
 //       It is constrained to this dylib by using the fvisibility=hidden flag.
 NSDictionary * repairIconState(NSDictionary *iconState) {
-    // Update icon lists for the dock
-    // NOTE: Wrap the array in a fake folder in order to pass to update function.
+    // NOTE: Wrap the dock array in a fake folder in order to pass to repair function.
     // XXX: This code assumes that the dock never has more than one icon list.
     NSArray *dock = [[NSArray alloc] initWithObject:[iconState objectForKey:@"buttonBar"]];
-    NSDictionary *folder = [[NSDictionary alloc] initWithObjectsAndKeys:dock, @"iconLists", nil];
+    NSDictionary *dockIconState = [NSDictionary dictionaryWithObject:dock forKey:@"iconLists"];
     [dock release];
-    dock = [repairFolderIconState(folder, NO, YES) objectForKey:@"iconLists"];
-    [folder release];
 
-    // Update icon lists for the root folder
+    // Repair icon list for the dock
+    dockIconState = repairFolderIconState(dockIconState, NO, YES);
+
+    // Repair icon lists for the root folder
     iconState = repairFolderIconState(iconState, YES, NO);
 
     // Combine fixed dock and lists
     iconState = [[iconState mutableCopy] autorelease];
-    [(NSMutableDictionary *)iconState setObject:[dock lastObject] forKey:@"buttonBar"];
+    [(NSMutableDictionary *)iconState setObject:[[dockIconState objectForKey:@"iconLists"] lastObject] forKey:@"buttonBar"];
 
     return iconState;
 }
