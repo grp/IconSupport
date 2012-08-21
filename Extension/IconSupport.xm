@@ -193,11 +193,6 @@ static BOOL needsConversion_ = NO;
 
 %hook SBIconModel
 
-- (BOOL)importState:(id)state {
-    // Returning NO disables iTunes sync
-    return [[ISIconSupport sharedInstance] isBeingUsedByExtensions] ? NO : %orig;
-}
-
 - (id)init {
     // Upon upgrading IconSupport, if a user has an IconSupportState.plist
     // file but no IconSupport-enabled extensions, must rename plist file to
@@ -243,50 +238,9 @@ static BOOL needsConversion_ = NO;
     return %orig;
 }
 
-- (id)iconStatePath {
-    NSString *defPath = %orig;
-
-    NSString *basePath = [defPath stringByDeletingLastPathComponent];
-    NSString *path = [basePath stringByAppendingString:@"/IconSupportState.plist"];
-
-    // Compare the previous and new hash
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSString *oldHash = [defaults stringForKey:@"ISLastUsed"];
-    NSString *newHash = [[ISIconSupport sharedInstance] extensionString];
-    ISLog(@"Old hash is: %@, new hash is: %@", oldHash, newHash);
-
-    // NOTE: This should only be possible once (at respring).
-    NSFileManager *manager = [NSFileManager defaultManager];
-    if (![newHash isEqualToString:oldHash]) {
-        // If no IconSupport-using extensions are loaded, rename the state file
-        if ([newHash isEqualToString:@""] && [manager fileExistsAtPath:path]) {
-            BOOL success = [manager removeItemAtPath:defPath error:NULL];
-            if (success) {
-                success = [manager copyItemAtPath:path toPath:defPath error:NULL];
-                if (success) {
-                    [manager removeItemAtPath:path error:NULL];
-                }
-            }
-        }
-
-        // Mark that the icon state may require fixing-up
-        needsConversion_ = YES;
-
-        // Save new hash to settings
-        [defaults setObject:newHash forKey:@"ISLastUsed"];
-        ISLog(@"Saved current hash (%@) to ISLastUsed key.", newHash);
-    }
-
-    if ([newHash isEqualToString:@""]) {
-        // No IconSupport-enabled extensions are in use; use default path
-        path = defPath;
-    } else if (![manager fileExistsAtPath:path]) {
-        // IconSupport state file does not exist; use default (Safe Mode) file
-        [manager copyItemAtPath:defPath toPath:path error:NULL];
-        ISLog(@"IconSupport state file does not exist; using default.");
-    }
-
-    return path;
+- (BOOL)importState:(id)state {
+    // Returning NO disables iTunes sync
+    return [[ISIconSupport sharedInstance] isBeingUsedByExtensions] ? NO : %orig;
 }
 
 - (id)exportState:(BOOL)withFolders {
@@ -338,18 +292,81 @@ static BOOL needsConversion_ = NO;
     return newState;
 }
 
-// 5.x
-%group GFirmware5x
+
+- (id)iconStatePath {
+    NSString *defPath = %orig;
+
+    NSString *basePath = [defPath stringByDeletingLastPathComponent];
+    NSString *path = [basePath stringByAppendingString:@"/IconSupportState.plist"];
+
+    // Compare the previous and new hash
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSString *oldHash = [defaults stringForKey:@"ISLastUsed"];
+    NSString *newHash = [[ISIconSupport sharedInstance] extensionString];
+    ISLog(@"Old hash is: %@, new hash is: %@", oldHash, newHash);
+
+    // NOTE: This should only be possible once (at respring).
+    NSFileManager *manager = [NSFileManager defaultManager];
+    if (![newHash isEqualToString:oldHash]) {
+        // If no IconSupport-using extensions are loaded, rename the state file
+        if ([newHash isEqualToString:@""] && [manager fileExistsAtPath:path]) {
+            BOOL success = [manager removeItemAtPath:defPath error:NULL];
+            if (success) {
+                success = [manager copyItemAtPath:path toPath:defPath error:NULL];
+                if (success) {
+                    [manager removeItemAtPath:path error:NULL];
+                }
+            }
+        }
+
+        // Mark that the icon state may require fixing-up
+        needsConversion_ = YES;
+
+        // Save new hash to settings
+        [defaults setObject:newHash forKey:@"ISLastUsed"];
+        ISLog(@"Saved current hash (%@) to ISLastUsed key.", newHash);
+    }
+
+    if ([newHash isEqualToString:@""]) {
+        // No IconSupport-enabled extensions are in use; use default path
+        path = defPath;
+    } else if (![manager fileExistsAtPath:path]) {
+        // IconSupport state file does not exist; use default (Safe Mode) file
+        [manager copyItemAtPath:defPath toPath:path error:NULL];
+        ISLog(@"IconSupport state file does not exist; using default.");
+    }
+
+    return path;
+}
+
+%end
+
+//------------------------------------------------------------------------------
+
+%hook SBIconModel %group GFirmware4x
+
+- (id)_iconState {
+    id result = %orig;
+    if (needsConversion_) {
+        result = repairIconState(result);
+        needsConversion_ = NO;
+    }
+    return result;
+}
+
+%end %end
+
+//------------------------------------------------------------------------------
+
+%hook SBIconModel %group GFirmware5x
 
 - (id)_cachedIconStatePath {
     // NOTE: Failing to override this could cause Safe Mode's cached layout to
     //       be used (if it exists) and thus overwrite IconSupport's layout.
     NSString *path = %orig;
-
     if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
         path = [[path stringByDeletingLastPathComponent] stringByAppendingString:@"/DesiredIconSupportState.plist"];
     }
-
     return path;
 }
 
@@ -362,23 +379,9 @@ static BOOL needsConversion_ = NO;
     return result;
 }
 
-%end // GFirmware5x
+%end %end
 
-// 4.x
-%group GFirmware4x
-
-- (id)_iconState {
-    id result = %orig;
-    if (needsConversion_) {
-        result = repairIconState(result);
-        needsConversion_ = NO;
-    }
-    return result;
-}
-
-%end // GFirmware4x
-
-%end // SBIconModel
+//==============================================================================
 
 __attribute__((constructor)) static void init() {
     // Only hook for iOS 4 or newer
