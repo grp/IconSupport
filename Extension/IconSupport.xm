@@ -343,17 +343,19 @@ static BOOL needsConversion_ = NO;
 
 //------------------------------------------------------------------------------
 
-%hook SBIconModel %group GFirmware4x
-
-- (id)_iconState {
-    id result = %orig;
+static inline id convertIfNecessary(id iconState) {
     if (needsConversion_) {
-        result = repairIconState(result);
+        iconState = repairIconState(iconState);
         needsConversion_ = NO;
     }
-    return result;
+    return iconState;
 }
 
+%hook SBIconModel %group GFirmware4x
+- (id)_iconState { return convertIfNecessary(%orig); }
+%end %end
+%hook SBIconModel %group GFirmware5x
+- (id)_iconState:(BOOL)ignoreDesiredIconStateFile { return convertIfNecessary(%orig); }
 %end %end
 
 //------------------------------------------------------------------------------
@@ -368,15 +370,6 @@ static BOOL needsConversion_ = NO;
         path = [[path stringByDeletingLastPathComponent] stringByAppendingString:@"/DesiredIconSupportState.plist"];
     }
     return path;
-}
-
-- (id)_iconState:(BOOL)ignoreDesiredIconStateFile {
-    id result = %orig;
-    if (needsConversion_) {
-        result = repairIconState(result);
-        needsConversion_ = NO;
-    }
-    return result;
 }
 
 %end %end
