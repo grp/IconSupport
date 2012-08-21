@@ -13,6 +13,9 @@
 #define kISiPadDefaultColumnsPerPage 4
 #define kISiPadDefaultRowsPerPage 5
 
+#define kFilenameState @"IconSupportState.plist"
+#define kFilenameDesiredState @"DesiredIconSupportState.plist"
+
 #ifdef DEBUG
 #define ISLog NSLog
 #else
@@ -216,7 +219,7 @@ static BOOL needsConversion_ = NO;
             // FIXME: Avoid hard-coding paths, as they may change in future firmware.
             NSFileManager *manager = [NSFileManager defaultManager];
             NSString *basePath = @"/var/mobile/Library/SpringBoard";
-            NSString *path = [basePath stringByAppendingPathComponent:@"IconSupportState.plist"];
+            NSString *path = [basePath stringByAppendingPathComponent:kFilenameState];
             if ([manager fileExistsAtPath:path]) {
                 // Move IconSupport state file to default state file
                 NSString *defPath = [basePath stringByAppendingPathComponent:@"IconState.plist"];
@@ -297,7 +300,7 @@ static BOOL needsConversion_ = NO;
     NSString *defPath = %orig;
 
     NSString *basePath = [defPath stringByDeletingLastPathComponent];
-    NSString *path = [basePath stringByAppendingPathComponent:@"IconSupportState.plist"];
+    NSString *path = [basePath stringByAppendingPathComponent:kFilenameState];
 
     // Compare the previous and new hash
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -367,7 +370,7 @@ static inline id convertIfNecessary(id iconState) {
     //       be used (if it exists) and thus overwrite IconSupport's layout.
     NSString *path = %orig;
     if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
-        path = [[path stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"DesiredIconSupportState.plist"];
+        path = [[path stringByDeletingLastPathComponent] stringByAppendingPathComponent:kFilenameDesiredState];
     }
     return path;
 }
