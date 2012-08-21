@@ -172,7 +172,7 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRo
 NSDictionary * repairIconState(NSDictionary *iconState) {
     // NOTE: Wrap the dock array in a fake folder in order to pass to repair function.
     // XXX: This code assumes that the dock never has more than one icon list.
-    NSArray *dock = [[NSArray alloc] initWithObject:[iconState objectForKey:@"buttonBar"]];
+    NSArray *dock = [[NSArray alloc] initWithObjects:[iconState objectForKey:@"buttonBar"], nil];
     NSDictionary *dockIconState = [NSDictionary dictionaryWithObject:dock forKey:@"iconLists"];
     [dock release];
 
