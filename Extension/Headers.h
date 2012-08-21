@@ -5,6 +5,26 @@
 - (BOOL)isWildcat;
 @end
 
+// iOS 3.x
+@class SBButtonBar;
+
+@interface SBIconList : NSObject @end
+
+// iOS 4.x+
+@interface SBIconListModel : NSObject
++ (int)maxIcons;
+@end
+@interface SBDockIconListModel : SBIconListModel @end
+
+@interface SBFolder : NSObject
++ (int)maxListCount;
+- (Class)listModelClass;
+@end
+@interface SBRootFolder : SBFolder
+- (id)dockModel;
+@end
+
+// iOS (All versions)
 @interface SBAlertItem : NSObject <UIAlertViewDelegate>
 // NOTE: In iOS 3, this property is a UIModalView.
 @property(readonly, retain) UIAlertView *alertSheet;
@@ -14,9 +34,6 @@
 + (id)sharedInstance;
 - (void)activateAlertItem:(id)item;
 @end
-
- // iOS 3.x
-@class SBButtonBar;
 
 @interface SBIconModel : NSObject
 + (id)sharedInstance;
@@ -31,27 +48,6 @@
 @interface SBIconModel (Firmware_GTE_40)
 - (id)iconStatePath;
 @end
-
- // iOS 3.x
-@interface SBIconList : NSObject @end
-
-// iOS 4.x+
-@interface SBFolder : NSObject
-+ (int)maxListCount;
-- (Class)listModelClass;
-@end
-@interface SBRootFolder : SBFolder
-- (id)dockModel;
-@end
-
-// iOS 4.x+
-@interface SBIconListModel : NSObject
-+ (int)maxIcons;
-@end
-@interface SBDockIconListModel : SBIconListModel @end
-
-// iOS 4.x+
-@class SBFolderIcon;
 
 #endif // ICONSUPPORT_HEADERS_H_
 

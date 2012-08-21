@@ -192,6 +192,8 @@ NSDictionary * repairIconState(NSDictionary *iconState) {
     return iconState;
 }
 
+//==============================================================================
+
 static BOOL needsConversion_ = NO;
 
 %hook SBIconModel
@@ -294,7 +296,6 @@ static BOOL needsConversion_ = NO;
 
     return newState;
 }
-
 
 - (id)iconStatePath {
     NSString *defPath = %orig;
