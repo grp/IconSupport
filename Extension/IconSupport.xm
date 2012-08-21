@@ -216,10 +216,10 @@ static BOOL needsConversion_ = NO;
             // FIXME: Avoid hard-coding paths, as they may change in future firmware.
             NSFileManager *manager = [NSFileManager defaultManager];
             NSString *basePath = @"/var/mobile/Library/SpringBoard";
-            NSString *path = [basePath stringByAppendingString:@"/IconSupportState.plist"];
+            NSString *path = [basePath stringByAppendingPathComponent:@"IconSupportState.plist"];
             if ([manager fileExistsAtPath:path]) {
                 // Move IconSupport state file to default state file
-                NSString *defPath = [basePath stringByAppendingString:@"/IconState.plist"];
+                NSString *defPath = [basePath stringByAppendingPathComponent:@"IconState.plist"];
                 BOOL success = [manager removeItemAtPath:defPath error:NULL];
                 if (success) {
                     success = [manager copyItemAtPath:path toPath:defPath error:NULL];
@@ -297,7 +297,7 @@ static BOOL needsConversion_ = NO;
     NSString *defPath = %orig;
 
     NSString *basePath = [defPath stringByDeletingLastPathComponent];
-    NSString *path = [basePath stringByAppendingString:@"/IconSupportState.plist"];
+    NSString *path = [basePath stringByAppendingPathComponent:@"IconSupportState.plist"];
 
     // Compare the previous and new hash
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -367,7 +367,7 @@ static inline id convertIfNecessary(id iconState) {
     //       be used (if it exists) and thus overwrite IconSupport's layout.
     NSString *path = %orig;
     if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
-        path = [[path stringByDeletingLastPathComponent] stringByAppendingString:@"/DesiredIconSupportState.plist"];
+        path = [[path stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"DesiredIconSupportState.plist"];
     }
     return path;
 }
