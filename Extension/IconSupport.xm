@@ -192,6 +192,23 @@ NSDictionary * repairIconState(NSDictionary *iconState) {
     return iconState;
 }
 
+//------------------------------------------------------------------------------
+
+static void moveFile(NSString *srcPath, NSString *dstPath) {
+    NSFileManager *manager = [NSFileManager defaultManager];
+    if ([manager fileExistsAtPath:srcPath]) {
+        // Remove any existing file at destination
+        if ([manager fileExistsAtPath:dstPath]) {
+            if (![manager removeItemAtPath:dstPath error:NULL]) {
+                return;
+            }
+        }
+
+        // Move source file to destination
+        [manager moveItemAtPath:srcPath toPath:dstPath error:NULL];
+    }
+}
+
 //==============================================================================
 
 static BOOL needsConversion_ = NO;
@@ -219,20 +236,11 @@ static BOOL needsConversion_ = NO;
         if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
             // No IconSupport-enabled extensions are loaded
             // FIXME: Avoid hard-coding paths, as they may change in future firmware.
-            NSFileManager *manager = [NSFileManager defaultManager];
             NSString *basePath = @"/var/mobile/Library/SpringBoard";
             NSString *path = [basePath stringByAppendingPathComponent:kFilenameState];
-            if ([manager fileExistsAtPath:path]) {
-                // Move IconSupport state file to default state file
-                NSString *defPath = [basePath stringByAppendingPathComponent:@"IconState.plist"];
-                BOOL success = [manager removeItemAtPath:defPath error:NULL];
-                if (success) {
-                    success = [manager copyItemAtPath:path toPath:defPath error:NULL];
-                    if (success) {
-                        [manager removeItemAtPath:path error:NULL];
-                    }
-                }
-            }
+            // Move IconSupport state file to default state file
+            NSString *defPath = [basePath stringByAppendingPathComponent:@"IconState.plist"];
+            moveFile(path, defPath);
         }
 
         // Save fact that first load has completed
@@ -310,17 +318,10 @@ static BOOL needsConversion_ = NO;
     ISLog(@"Old hash is: %@, new hash is: %@", oldHash, newHash);
 
     // NOTE: This should only be possible once (at respring).
-    NSFileManager *manager = [NSFileManager defaultManager];
     if (![newHash isEqualToString:oldHash]) {
         // If no IconSupport-using extensions are loaded, rename the state file
-        if ([newHash isEqualToString:@""] && [manager fileExistsAtPath:path]) {
-            BOOL success = [manager removeItemAtPath:defPath error:NULL];
-            if (success) {
-                success = [manager copyItemAtPath:path toPath:defPath error:NULL];
-                if (success) {
-                    [manager removeItemAtPath:path error:NULL];
-                }
-            }
+        if ([newHash isEqualToString:@""]) {
+            moveFile(path, defPath);
         }
 
         // Mark that the icon state may require fixing-up
@@ -334,10 +335,13 @@ static BOOL needsConversion_ = NO;
     if ([newHash isEqualToString:@""]) {
         // No IconSupport-enabled extensions are in use; use default path
         path = defPath;
-    } else if (![manager fileExistsAtPath:path]) {
-        // IconSupport state file does not exist; use default (Safe Mode) file
-        [manager copyItemAtPath:defPath toPath:path error:NULL];
-        ISLog(@"IconSupport state file does not exist; using default.");
+    } else {
+        NSFileManager *manager = [NSFileManager defaultManager];
+        if (![manager fileExistsAtPath:path]) {
+            // IconSupport state file does not exist; use default (Safe Mode) file
+            [manager copyItemAtPath:defPath toPath:path error:NULL];
+            ISLog(@"IconSupport state file does not exist; using default.");
+        }
     }
 
     return path;
