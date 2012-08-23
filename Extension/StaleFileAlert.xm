@@ -5,14 +5,27 @@
 %hook ISStaleFileAlertItem
 
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-    // Save fact that this alert has been shown and handled
-    // NOTE: Must do this beforehand, in case exit() is called.
-    CFPreferencesSetAppValue((CFStringRef)kHasOldStateFile, [NSNumber numberWithBool:NO], CFSTR(APP_ID));
-    CFPreferencesAppSynchronize(CFSTR(APP_ID));
+    if (alertView == [self alertSheet]) {
+        // Save fact that this alert has been shown and handled
+        // NOTE: Must do this beforehand, in case exit() is called.
+        CFPreferencesSetAppValue((CFStringRef)kHasOldStateFile, [NSNumber numberWithBool:NO], CFSTR(APP_ID));
+        CFPreferencesAppSynchronize(CFSTR(APP_ID));
 
-    if (buttonIndex == 0) {
-        // Delete the file and force a restart
-        [[NSFileManager defaultManager] removeItemAtPath:@"/var/mobile/Library/SpringBoard/IconSupportState.plist" error:NULL];
+        NSString *message = nil;
+        if (buttonIndex == 0) {
+            // Delete the file
+            [[NSFileManager defaultManager] removeItemAtPath:@"/var/mobile/Library/SpringBoard/IconSupportState.plist" error:NULL];
+            message = @"The icon layout file has been deleted.\n\nSpringBoard will now restart.";
+        } else {
+            message = @"The icon layout file will be used.\n\nSpringBoard will now restart.";
+        }
+
+        // Show an alert stating that the device will respring
+        UIAlertView *view = [[UIAlertView alloc] initWithTitle:@"IconSupport Warning" message:message delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil];
+        [view show];
+        [view release];
+    } else {
+        // Force a restart
         exit(0);
     }
 }
