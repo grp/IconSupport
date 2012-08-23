@@ -214,42 +214,32 @@ static void moveFile(NSString *srcPath, NSString *dstPath) {
 
 static BOOL needsConversion_ = NO;
 
+static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
+    BOOL result = defaultValue;
+    CFPropertyListRef propList = CFPreferencesCopyAppValue((CFStringRef)key, CFSTR(APP_ID));
+    if (propList) {
+        if (CFGetTypeID(propList) == CFBooleanGetTypeID()) {
+            result = CFBooleanGetValue(reinterpret_cast<CFBooleanRef>(propList));
+        }
+        CFRelease(propList);
+    }
+    return result;
+}
+
 %hook SBIconModel
 
 - (id)init {
-    // If an old state file exists (after a fresh install), ask user to decide
-    // whether to use or delete it.
-    BOOL hasOldStateFile = NO;
-    CFPropertyListRef propList = CFPreferencesCopyAppValue((CFStringRef)kHasOldStateFile, CFSTR(APP_ID));
-    if (propList) {
-        if (CFGetTypeID(propList) == CFBooleanGetTypeID()) {
-            hasOldStateFile = CFBooleanGetValue(reinterpret_cast<CFBooleanRef>(propList));
-        }
-        CFRelease(propList);
-    }
-
-    if (hasOldStateFile) {
+    if (boolForKey(kHasOldStateFile, NO)) {
+        // An old state file exists; ask user whether to use or delete it.
+        // NOTE: This should only happen after an install, not an upgrade.
         initStaleFileAlert();
-        return %orig;
-    }
-
-    // Upon upgrading IconSupport, if a user has an IconSupportState.plist
-    // file but no IconSupport-enabled extensions, must rename plist file to
-    // IconState.plist.
-    // NOTE: Prior to version 1.7.5, IconSupport always used IconSupportState.plist,
-    // even when no IconSupport-enabled extensions were in use. Since 1.7.5,
-    // IconSupport will now use IconState.plist in that situation.
-    BOOL firstLoadAfterUpgrade = NO;
-    propList = CFPreferencesCopyAppValue((CFStringRef)kFirstLoadAfterUpgrade, CFSTR(APP_ID));
-    if (propList != NULL) {
-        if (CFGetTypeID(propList) == CFBooleanGetTypeID()) {
-            firstLoadAfterUpgrade = CFBooleanGetValue(reinterpret_cast<CFBooleanRef>(propList));
-        }
-        CFRelease(propList);
-    }
-
-    if (firstLoadAfterUpgrade) {
-        // IconSupport has just been upgraded
+    } else if (boolForKey(kFirstLoadAfterUpgrade, NO)) {
+        // Upon upgrading IconSupport, if a user has an IconSupportState.plist
+        // file but no IconSupport-enabled extensions, must rename plist file to
+        // IconState.plist.
+        // NOTE: Prior to version 1.7.5, IconSupport always used IconSupportState.plist,
+        // even when no IconSupport-enabled extensions were in use. Since 1.7.5,
+        // IconSupport will now use IconState.plist in that situation.
         if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
             // No IconSupport-enabled extensions are loaded
             // FIXME: Avoid hard-coding paths, as they may change in future firmware.
