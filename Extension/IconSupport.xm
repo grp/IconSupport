@@ -212,8 +212,6 @@ static void moveFile(NSString *srcPath, NSString *dstPath) {
 
 //==============================================================================
 
-static BOOL needsConversion_ = NO;
-
 static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
     BOOL result = defaultValue;
     CFPropertyListRef propList = CFPreferencesCopyAppValue((CFStringRef)key, CFSTR(APP_ID));
@@ -325,6 +323,7 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
     ISLog(@"Old hash is: %@, new hash is: %@", oldHash, newHash);
 
     // NOTE: This should only be possible once (at respring).
+    BOOL needsRepair = NO;
     if (![newHash isEqualToString:oldHash]) {
         // If no IconSupport-using extensions are loaded, rename the state file
         if ([newHash isEqualToString:@""]) {
@@ -332,7 +331,7 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
         }
 
         // Mark that the icon state may require fixing-up
-        needsConversion_ = YES;
+        needsRepair = YES;
 
         // Save new hash to settings
         [defaults setObject:newHash forKey:@"ISLastUsed"];
@@ -351,27 +350,17 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
         }
     }
 
+    // Repair, if necessary
+    if (needsRepair) {
+        id iconState = [NSDictionary dictionaryWithContentsOfFile:path];
+        iconState = repairIconState(iconState);
+        [iconState writeToFile:path atomically:YES];
+    }
+
     return path;
 }
 
 %end
-
-//------------------------------------------------------------------------------
-
-static inline id convertIfNecessary(id iconState) {
-    if (needsConversion_) {
-        iconState = repairIconState(iconState);
-        needsConversion_ = NO;
-    }
-    return iconState;
-}
-
-%hook SBIconModel %group GFirmware4x
-- (id)_iconState { return convertIfNecessary(%orig); }
-%end %end
-%hook SBIconModel %group GFirmware5x
-- (id)_iconState:(BOOL)ignoreDesiredIconStateFile { return convertIfNecessary(%orig); }
-%end %end
 
 //------------------------------------------------------------------------------
 
@@ -402,10 +391,7 @@ __attribute__((constructor)) static void init() {
             %init;
 
             // Initialize firmware-dependent hooks
-            if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_5_0) {
-                // iOS 4
-                %init(GFirmware4x);
-            } else {
+            if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_5_0) {
                 // iOS 5
                 %init(GFirmware5x);
             }
