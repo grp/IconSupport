@@ -1,6 +1,7 @@
 // Updated for iOS4 by Sakurina and chpwn.
 
 #import "ISIconSupport.h"
+#import "StaleFileAlert.h"
 
 #include <substrate.h>
 #include "PreferenceConstants.h"
@@ -216,6 +217,22 @@ static BOOL needsConversion_ = NO;
 %hook SBIconModel
 
 - (id)init {
+    // If an old state file exists (after a fresh install), ask user to decide
+    // whether to use or delete it.
+    BOOL hasOldStateFile = NO;
+    CFPropertyListRef propList = CFPreferencesCopyAppValue((CFStringRef)kHasOldStateFile, CFSTR(APP_ID));
+    if (propList) {
+        if (CFGetTypeID(propList) == CFBooleanGetTypeID()) {
+            hasOldStateFile = CFBooleanGetValue(reinterpret_cast<CFBooleanRef>(propList));
+        }
+        CFRelease(propList);
+    }
+
+    if (hasOldStateFile) {
+        initStaleFileAlert();
+        return %orig;
+    }
+
     // Upon upgrading IconSupport, if a user has an IconSupportState.plist
     // file but no IconSupport-enabled extensions, must rename plist file to
     // IconState.plist.
@@ -223,7 +240,7 @@ static BOOL needsConversion_ = NO;
     // even when no IconSupport-enabled extensions were in use. Since 1.7.5,
     // IconSupport will now use IconState.plist in that situation.
     BOOL firstLoadAfterUpgrade = NO;
-    CFPropertyListRef propList = CFPreferencesCopyAppValue((CFStringRef)kFirstLoadAfterUpgrade, CFSTR(APP_ID));
+    propList = CFPreferencesCopyAppValue((CFStringRef)kFirstLoadAfterUpgrade, CFSTR(APP_ID));
     if (propList != NULL) {
         if (CFGetTypeID(propList) == CFBooleanGetTypeID()) {
             firstLoadAfterUpgrade = CFBooleanGetValue(reinterpret_cast<CFBooleanRef>(propList));

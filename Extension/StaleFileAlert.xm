@@ -32,57 +32,36 @@
 
 %end
 
-static void showStaleFileMessageIfNecessary() {
-    BOOL hasOldStateFile = NO;
-    CFPropertyListRef propList = CFPreferencesCopyAppValue((CFStringRef)kHasOldStateFile, CFSTR(APP_ID));
-    if (propList) {
-        if (CFGetTypeID(propList) == CFBooleanGetTypeID()) {
-            hasOldStateFile = CFBooleanGetValue(reinterpret_cast<CFBooleanRef>(propList));
-        }
-        CFRelease(propList);
-    }
-
-    if (hasOldStateFile) {
-        SBAlertItem *alert = [[[objc_getClass("ISStaleFileAlertItem") alloc] init] autorelease];
-        [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
-    }
+static inline void showStaleFileMessage() {
+    SBAlertItem *alert = [[objc_getClass("ISStaleFileAlertItem") alloc] init];
+    [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
+    [alert release];
 }
 
 %hook SBIconController %group GFirmware_Pre_43
-- (void)showInfoAlertIfNeeded { %orig; showStaleFileMessageIfNecessary(); }
+- (void)showInfoAlertIfNeeded { %orig; showStaleFileMessage(); }
 %end %end
 
 %hook AAAccountManager %group GFirmware_Post_43
-+ (void)showMobileMeOfferIfNecessary { %orig; showStaleFileMessageIfNecessary(); }
++ (void)showMobileMeOfferIfNecessary { %orig; showStaleFileMessage(); }
 %end %end
 
-__attribute__((constructor)) static void init() {
-    // Only hook for iOS 4 or newer
-    if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_4_0) {
-        NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+void initStaleFileAlert() {
+    // Register new subclass
+    Class $SuperClass = objc_getClass("SBAlertItem");
+    if ($SuperClass != Nil) {
+        Class $ISStaleFileAlertItem = objc_allocateClassPair($SuperClass, "ISStaleFileAlertItem", 0);
+        if ($ISStaleFileAlertItem != Nil) {
+            objc_registerClassPair($ISStaleFileAlertItem);
 
-        // NOTE: This library should only be loaded for SpringBoard
-        NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
-        if ([bundleId isEqualToString:@"com.apple.springboard"]) {
-            // Register new subclass
-            Class $SuperClass = objc_getClass("SBAlertItem");
-            if ($SuperClass != Nil) {
-                Class $ISStaleFileAlertItem = objc_allocateClassPair($SuperClass, "ISStaleFileAlertItem", 0);
-                if ($ISStaleFileAlertItem != Nil) {
-                    objc_registerClassPair($ISStaleFileAlertItem);
+            %init;
 
-                    %init;
-
-                    if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_3) {
-                        %init(GFirmware_Pre_43);
-                    } else {
-                        %init(GFirmware_Post_43);
-                    }
-                }
+            if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_3) {
+                %init(GFirmware_Pre_43);
+            } else {
+                %init(GFirmware_Post_43);
             }
         }
-
-        [pool release];
     }
 }
 
