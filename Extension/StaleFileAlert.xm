@@ -6,14 +6,9 @@
 
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
     if (alertView == [self alertSheet]) {
-        // Save fact that this alert has been shown and handled
-        // NOTE: Must do this beforehand, in case exit() is called.
-        CFPreferencesSetAppValue((CFStringRef)kHasOldStateFile, [NSNumber numberWithBool:NO], CFSTR(APP_ID));
-        CFPreferencesAppSynchronize(CFSTR(APP_ID));
-
         NSString *message = nil;
         if (buttonIndex == 0) {
-            // Delete the file
+            // Delete the old state file
             [[NSFileManager defaultManager] removeItemAtPath:@"/var/mobile/Library/SpringBoard/IconSupportState.plist" error:NULL];
             message = @"The icon layout file has been deleted.\n\nSpringBoard will now restart.";
         } else {
@@ -25,7 +20,11 @@
         [view show];
         [view release];
     } else {
-        // Force a restart
+        // Record that the old state file has been handled
+        CFPreferencesSetAppValue((CFStringRef)kHasOldStateFile, [NSNumber numberWithBool:NO], CFSTR(APP_ID));
+        CFPreferencesAppSynchronize(CFSTR(APP_ID));
+
+        // Force a respring
         exit(0);
     }
 }
