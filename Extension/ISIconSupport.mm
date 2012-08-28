@@ -53,12 +53,17 @@ static ISIconSupport *sharedSupport = nil;
 }
 
 - (void)repairAndReloadIconState {
+    if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_0) {
+        // iOS 3.x
+        return;
+    }
+
     SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
     id iconState = [iconModel iconState];
     id newIconState = repairIconState(iconState);
     if (![newIconState isEqual:iconState]) {
-        [newIconState writeToFile:[iconModel iconStatePath] atomically:YES];
-        [iconModel noteIconStateChangedExternally];
+            [newIconState writeToFile:[iconModel iconStatePath] atomically:YES];
+            [iconModel noteIconStateChangedExternally];
     }
 }
 
