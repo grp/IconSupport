@@ -42,21 +42,60 @@
     [alertView addButtonWithTitle:@"Use"];
 }
 
+- (BOOL)shouldShowInLockScreen { return NO; }
+
 %end
 
-static inline void showStaleFileMessage() {
+//------------------------------------------------------------------------------
+
+%hook ISStaleAlertItem %group GFirmware_GTE_40_LT_50
+
+- (void)didDeactivateForReason:(int)reason {
+    %orig;
+
+    if (reason == 0) {
+        // Was deactivated due to lock, not user interaction
+        // FIXME: Is there no better way to get the alert to reappear?
+        [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:self];
+    }
+}
+
+%end %end
+
+//------------------------------------------------------------------------------
+
+%hook ISStaleAlertItem %group GFirmware_GTE_50_LT_60
+
+- (BOOL)reappearsAfterLock { return YES; }
+
+%end %end
+
+//------------------------------------------------------------------------------
+
+%hook ISStaleAlertItem %group GFirmware_GTE_60
+
+// FIXME: Is this the correct way to do this?
+//        And even though reappearsAfterLock returns NO by default,
+//        the alert still reappears... why?
+- (BOOL)behavesSuperModally { return YES; }
+
+%end %end
+
+//==============================================================================
+
+%hook SpringBoard
+
+- (void)applicationDidFinishLaunching:(id)application {
+    %orig;
+
     SBAlertItem *alert = [[objc_getClass("ISStaleFileAlertItem") alloc] init];
     [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
     [alert release];
 }
 
-%hook SBIconController %group GFirmware_Pre_43
-- (void)showInfoAlertIfNeeded { %orig; showStaleFileMessage(); }
-%end %end
+%end
 
-%hook AAAccountManager %group GFirmware_Post_43
-+ (void)showMobileMeOfferIfNecessary { %orig; showStaleFileMessage(); }
-%end %end
+//==============================================================================
 
 void initStaleFileAlert() {
     // Register new subclass
@@ -68,10 +107,12 @@ void initStaleFileAlert() {
 
             %init;
 
-            if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_3) {
-                %init(GFirmware_Pre_43);
+            if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_5_0) {
+                %init(GFirmware_GTE_40_LT_50);
+            } else if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_6_0) {
+                %init(GFirmware_GTE_50_LT_60);
             } else {
-                %init(GFirmware_Post_43);
+                %init(GFirmware_GTE_60);
             }
         }
     }
