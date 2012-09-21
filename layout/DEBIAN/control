@@ -4,8 +4,8 @@ Author: Sakurina, chpwn, ashikase <gaizin@gmail.com>
 Maintainer: BigBoss <bigboss@thebigboss.org>
 Name: IconSupport
 Package: com.chpwn.iconsupport
-Pre-Depends: firmware (>= 3.0), firmware (<< 6.0)
-Depends: mobilesubstrate, jp.ashikase.bugfix.stuckpages, jp.ashikase.bugfix.duplicateicons
+Pre-Depends: firmware (>= 3.0), firmware (<< 7.0)
+Depends: mobilesubstrate, firmware (>= 6.0) | jp.ashikase.bugfix.stuckpages, firmware (>= 6.0) | jp.ashikase.bugfix.duplicateicons
 Section: Development
 Version: 1.7.7
 Architecture: iphoneos-arm

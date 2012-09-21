@@ -24,6 +24,15 @@
 - (id)dockModel;
 @end
 
+// iOS 6.x+
+@interface SBIconModelPropertyListFileStore : NSObject
+@property(retain, nonatomic) NSURL *currentIconStateURL;
+@property(retain, nonatomic) NSURL *desiredIconStateURL;
+@end
+@interface SBDefaultIconModelStore : SBIconModelPropertyListFileStore
++ (id)sharedInstance;
+@end
+
 // iOS (All versions)
 @interface SBAlertItem : NSObject <UIAlertViewDelegate>
 // NOTE: In iOS 3, this property is a UIModalView.
@@ -35,10 +44,16 @@
 - (void)activateAlertItem:(id)item;
 @end
 
+@interface SBIconController : NSObject
++ (id)sharedInstance;
+@end
+@interface SBIconController (GFirmware_GTE_60)
+- (void)noteIconStateChangedExternally;
+@end
+
 @interface SBIconModel : NSObject
 + (id)sharedInstance;
 - (id)iconState;
-- (void)noteIconStateChangedExternally;
 @end
 @interface SBIconModel (Firmware_LT_40)
 @property(readonly, retain) SBButtonBar *buttonBar;
@@ -47,6 +62,9 @@
 @end
 @interface SBIconModel (Firmware_GTE_40)
 - (id)iconStatePath;
+@end
+@interface SBIconModel (GFirmware_LT_60)
+- (void)noteIconStateChangedExternally;
 @end
 
 #endif // ICONSUPPORT_HEADERS_H_
