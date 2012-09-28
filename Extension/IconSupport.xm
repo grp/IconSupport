@@ -218,85 +218,89 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
     return result;
 }
 
-%hook SBIconModel
+%hook SBIconController
 
-+ (id)initialize {
-    if (self == objc_getClass("SBIconModel")) {
-        if (boolForKey(kHasOldStateFile, NO)) {
-            // An old state file exists; ask user whether to use or delete it.
-            // NOTE: This should only happen after an install, not an upgrade.
-            initStaleFileAlert();
-        } else {
-            // FIXME: Avoid hard-coding paths, as they may change in future firmware.
-            NSString *basePath = @"/var/mobile/Library/SpringBoard";
-            NSString *iconSupportPath = [basePath stringByAppendingPathComponent:kFilenameState];
-            NSString *defaultPath = [basePath stringByAppendingPathComponent:@"IconState.plist"];
+- (id)init {
+    if (boolForKey(kHasOldStateFile, NO)) {
+        // An old state file exists; ask user whether to use or delete it.
+        // NOTE: This should only happen after an install, not an upgrade.
+        initStaleFileAlert();
+    } else {
+        // FIXME: Avoid hard-coding paths, as they may change in future firmware.
+        NSString *basePath = @"/var/mobile/Library/SpringBoard";
+        NSString *iconSupportPath = [basePath stringByAppendingPathComponent:kFilenameState];
+        NSString *defaultPath = [basePath stringByAppendingPathComponent:@"IconState.plist"];
 
-            ISIconSupport *iconSupport = [ISIconSupport sharedInstance];
-            BOOL isBeingUsed = [iconSupport isBeingUsedByExtensions];
-            if (boolForKey(kFirstLoadAfterUpgrade, NO)) {
-                // Upon upgrading IconSupport, if a user has an IconSupportState.plist
-                // file but no IconSupport-enabled extensions, must rename plist file to
-                // IconState.plist.
-                // NOTE: Prior to version 1.7.5, IconSupport always used IconSupportState.plist,
-                // even when no IconSupport-enabled extensions were in use. Since 1.7.5,
-                // IconSupport will now use IconState.plist in that situation.
-                if (!isBeingUsed) {
-                    // No IconSupport-enabled extensions are loaded;
-                    // move IconSupport state file to default state file
-                    moveFile(iconSupportPath, defaultPath);
-                }
-
-                // Save fact that first load has completed
-                CFPreferencesSetAppValue((CFStringRef)kFirstLoadAfterUpgrade, NULL, CFSTR(APP_ID));
-                CFPreferencesAppSynchronize(CFSTR(APP_ID));
-            }
-
-            // If number of extensions has changed, state will require repair
-            BOOL needsRepair = NO;
-
-            // Compare the previous and new hash
-            NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-            NSString *oldHash = [defaults stringForKey:@"ISLastUsed"];
-            NSString *newHash = [iconSupport extensionString];
-            if (![newHash isEqualToString:oldHash]) {
-                // If no IconSupport-using extensions are loaded, rename the state file
-                if (!isBeingUsed) {
-                    moveFile(iconSupportPath, defaultPath);
-                }
-
-                // Mark that the icon state should be repaired
-                needsRepair = YES;
-
-                // Save new hash to settings
-                [defaults setObject:newHash forKey:@"ISLastUsed"];
-            }
-
-            // NOTE: Must set which path is in use, for possible repair below.
-            NSString *path;
+        ISIconSupport *iconSupport = [ISIconSupport sharedInstance];
+        BOOL isBeingUsed = [iconSupport isBeingUsedByExtensions];
+        if (boolForKey(kFirstLoadAfterUpgrade, NO)) {
+            // Upon upgrading IconSupport, if a user has an IconSupportState.plist
+            // file but no IconSupport-enabled extensions, must rename plist file to
+            // IconState.plist.
+            // NOTE: Prior to version 1.7.5, IconSupport always used IconSupportState.plist,
+            // even when no IconSupport-enabled extensions were in use. Since 1.7.5,
+            // IconSupport will now use IconState.plist in that situation.
             if (!isBeingUsed) {
-                // No IconSupport-enabled extensions are in use; use default path
-                path = defaultPath;
-            } else {
-                NSFileManager *manager = [NSFileManager defaultManager];
-                if (![manager fileExistsAtPath:iconSupportPath]) {
-                    // IconSupport state file does not exist; use default (Safe Mode) file
-                    [manager copyItemAtPath:defaultPath toPath:iconSupportPath error:NULL];
-                }
-                path = iconSupportPath;
+                // No IconSupport-enabled extensions are loaded;
+                // move IconSupport state file to default state file
+                moveFile(iconSupportPath, defaultPath);
             }
 
-            // Repair, if necessary
-            if (needsRepair) {
-                id iconState = [NSDictionary dictionaryWithContentsOfFile:path];
-                iconState = repairIconState(iconState);
-                [iconState writeToFile:path atomically:YES];
+            // Save fact that first load has completed
+            CFPreferencesSetAppValue((CFStringRef)kFirstLoadAfterUpgrade, NULL, CFSTR(APP_ID));
+            CFPreferencesAppSynchronize(CFSTR(APP_ID));
+        }
+
+        // If number of extensions has changed, state will require repair
+        BOOL needsRepair = NO;
+
+        // Compare the previous and new hash
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        NSString *oldHash = [defaults stringForKey:@"ISLastUsed"];
+        NSString *newHash = [iconSupport extensionString];
+        if (![newHash isEqualToString:oldHash]) {
+            // If no IconSupport-using extensions are loaded, rename the state file
+            if (!isBeingUsed) {
+                moveFile(iconSupportPath, defaultPath);
             }
+
+            // Mark that the icon state should be repaired
+            needsRepair = YES;
+
+            // Save new hash to settings
+            [defaults setObject:newHash forKey:@"ISLastUsed"];
+        }
+
+        // NOTE: Must set which path is in use, for possible repair below.
+        NSString *path;
+        if (!isBeingUsed) {
+            // No IconSupport-enabled extensions are in use; use default path
+            path = defaultPath;
+        } else {
+            NSFileManager *manager = [NSFileManager defaultManager];
+            if (![manager fileExistsAtPath:iconSupportPath]) {
+                // IconSupport state file does not exist; use default (Safe Mode) file
+                [manager copyItemAtPath:defaultPath toPath:iconSupportPath error:NULL];
+            }
+            path = iconSupportPath;
+        }
+
+        // Repair, if necessary
+        if (needsRepair) {
+            id iconState = [NSDictionary dictionaryWithContentsOfFile:path];
+            iconState = repairIconState(iconState);
+            [iconState writeToFile:path atomically:YES];
         }
     }
 
     return %orig;
 }
+
+%end
+
+//==============================================================================
+
+%hook SBIconModel
 
 - (BOOL)importState:(id)state {
     // Returning NO disables iTunes sync
