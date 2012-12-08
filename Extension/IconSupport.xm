@@ -98,7 +98,7 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRo
         }
 
         // Add any orphaned icons as a single list to end of folder
-        [iconLists addObject:[NSArray arrayWithArray:orphanedIcons_]];
+        [iconLists addObject:[NSMutableArray arrayWithArray:orphanedIcons_]];
         [orphanedIcons_ removeAllObjects];
 
         // Compact lists down to allowed maximum number of lists for this folder
