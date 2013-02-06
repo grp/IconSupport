@@ -70,7 +70,7 @@ static ISIconSupport *sharedSupport = nil;
             [iconModel noteIconStateChangedExternally];
         } else {
             // iOS 6.x+
-            [newIconState writeToFile:[[[objc_getClass("SBDefaultIconModelStore") sharedInstance] currentIconStateURL] absoluteString] atomically:YES];
+            [newIconState writeToFile:[[[objc_getClass("SBDefaultIconModelStore") sharedInstance] currentIconStateURL] path] atomically:YES];
             [[objc_getClass("SBIconController") sharedInstance] noteIconStateChangedExternally];
         }
     }
