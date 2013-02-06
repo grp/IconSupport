@@ -58,14 +58,26 @@ static ISIconSupport *sharedSupport = nil;
         return;
     }
 
-    BOOL isPreIOS6 = (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_6_0);
-    SBIconModel *iconModel = isPreIOS6 ?
+    SBIconModel *iconModel = (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_6_0) ?
         [objc_getClass("SBIconModel") sharedInstance] : [[objc_getClass("SBIconController") sharedInstance] model];
-    id iconState = [iconModel iconState];
-    id newIconState = repairIconState(iconState);
+    [self repairAndReloadIconState:[iconModel iconState]];
+}
+
+- (void)repairAndReloadIconState:(NSDictionary *)iconState {
+    if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_0) {
+        // iOS 3.x
+        return;
+    }
+
+    if (iconState == nil) {
+        return;
+    }
+
+    NSDictionary *newIconState = repairIconState(iconState);
     if (![newIconState isEqual:iconState]) {
-        if (isPreIOS6) {
+        if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_6_0) {
             // iOS 4.x or iOS 5.x
+            SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
             [newIconState writeToFile:[iconModel iconStatePath] atomically:YES];
             [iconModel noteIconStateChangedExternally];
         } else {
