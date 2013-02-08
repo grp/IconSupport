@@ -1,3 +1,4 @@
+#include "ISIconSupport.h"
 #include "PreferenceConstants.h"
 
 @interface ISStaleFileAlertItem : SBAlertItem @end
@@ -10,22 +11,24 @@
         if (buttonIndex == 0) {
             // Delete the old state file
             [[NSFileManager defaultManager] removeItemAtPath:@"/var/mobile/Library/SpringBoard/IconSupportState.plist" error:NULL];
-            message = @"The icon layout file has been deleted.\n\nSpringBoard will now restart.";
+
+            // Apply the standard state file
+            NSDictionary *iconState = [NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/SpringBoard/IconState.plist"];
+            [[ISIconSupport sharedInstance] repairAndReloadIconState:iconState];
+
+            message = @"The file has been deleted.";
         } else {
-            message = @"The icon layout file will be used.\n\nSpringBoard will now restart.";
+            message = @"The file will be used.";
         }
 
-        // Show an alert stating that the device will respring
-        UIAlertView *view = [[UIAlertView alloc] initWithTitle:@"IconSupport Warning" message:message delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil];
-        [view show];
-        [view release];
-    } else {
         // Record that the old state file has been handled
         CFPreferencesSetAppValue((CFStringRef)kHasOldStateFile, [NSNumber numberWithBool:NO], CFSTR(APP_ID));
         CFPreferencesAppSynchronize(CFSTR(APP_ID));
 
-        // Force a respring
-        exit(0);
+        // Show an alert stating the result
+        UIAlertView *view = [[UIAlertView alloc] initWithTitle:@"IconSupport Warning" message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+        [view show];
+        [view release];
     }
 }
 
