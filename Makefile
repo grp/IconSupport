@@ -1,4 +1,4 @@
-SUBPROJECTS = Extension PostInstall
+SUBPROJECTS = Extension extrainst_
 
 export APP_ID = com.chpwn.iconsupport
 
