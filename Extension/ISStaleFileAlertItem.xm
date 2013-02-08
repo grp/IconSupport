@@ -19,14 +19,14 @@
             NSDictionary *iconState = [NSDictionary dictionaryWithContentsOfFile:staleStateFilePath];
             [[ISIconSupport sharedInstance] repairAndReloadIconState:iconState];
 
-            message = @"The layout has been applied.";
+            message = @"The layout has been restored.";
         }
 
         // Delete the old state file
         [[NSFileManager defaultManager] removeItemAtPath:staleStateFilePath error:NULL];
 
         // Show an alert stating the result
-        UIAlertView *view = [[UIAlertView alloc] initWithTitle:@"IconSupport Warning" message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+        UIAlertView *view = [[UIAlertView alloc] initWithTitle:@"IconSupport" message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
         [view show];
         [view release];
     }
@@ -34,15 +34,16 @@
 
 - (void)configure:(BOOL)configure requirePasscodeForActions:(BOOL)require {
     NSString *title = @"IconSupport Warning";
-    NSString *body = @"An icon layout file from a previous installation of IconSupport has been detected.\n\n"
-        "Using this file will restore the icon layout from the last time that IconSupport was installed, which may have been long ago.";
+    NSString *body = @"An icon layout from a previous installation of IconSupport has been detected.\n\n"
+        "The layout may be quite old.\n\n"
+        "Do you wish to restore it?";
 
     UIAlertView *alertView = [self alertSheet];
     [alertView setDelegate:self];
     [alertView setTitle:title];
     [alertView setMessage:body];
     [alertView addButtonWithTitle:@"Delete"];
-    [alertView addButtonWithTitle:@"Use"];
+    [alertView addButtonWithTitle:@"Restore"];
 }
 
 - (BOOL)shouldShowInLockScreen { return NO; }
