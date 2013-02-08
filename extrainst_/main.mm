@@ -52,8 +52,12 @@ int main(int argc, char *argv[]) {
             if (strcmp(argv[1], "install") == 0) {
                 // This is a fresh install; note if an old state file exists
                 if ([manager fileExistsAtPath:stateFilePath]) {
-                    CFPreferencesSetAppValue((CFStringRef)kHasOldStateFile, [NSNumber numberWithBool:YES], CFSTR(APP_ID));
-                    CFPreferencesAppSynchronize(CFSTR(APP_ID));
+                    // Rename the state file to reflect that it is old
+                    // NOTE: The user will be asked whether or not they wish to use it.
+                    NSString *staleStateFilePath = [stateFilePath stringByAppendingString:@".stale"];
+                    [manager removeItemAtPath:staleStateFilePath error:NULL];
+                    [manager moveItemAtPath:stateFilePath toPath:staleStateFilePath error:NULL];
+                    printf("Moved %s to %s\n", [stateFilePath UTF8String], [staleStateFilePath UTF8String]);
                 }
             } else if (strcmp(argv[1], "upgrade") == 0) {
                 // Mark that an upgrade has occurred

@@ -221,7 +221,13 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
 %hook SBIconController
 
 - (id)init {
-    if (boolForKey(kHasOldStateFile, NO)) {
+    // FIXME: Avoid hard-coding paths, as they may change in future firmware.
+    NSString *basePath = @"/var/mobile/Library/SpringBoard";
+    NSString *iconSupportPath = [basePath stringByAppendingPathComponent:kFilenameState];
+    NSString *staleStateFilePath = [iconSupportPath stringByAppendingString:@".stale"];
+
+    NSFileManager *manager = [NSFileManager defaultManager];
+    if ([manager fileExistsAtPath:staleStateFilePath]) {
         // An old state file exists; ask user whether to use or delete it.
         // NOTE: This should only happen after an install, not an upgrade.
         initStaleFileAlert();
@@ -232,9 +238,6 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
             [alert release];
         }
     } else {
-        // FIXME: Avoid hard-coding paths, as they may change in future firmware.
-        NSString *basePath = @"/var/mobile/Library/SpringBoard";
-        NSString *iconSupportPath = [basePath stringByAppendingPathComponent:kFilenameState];
         NSString *defaultPath = [basePath stringByAppendingPathComponent:@"IconState.plist"];
 
         ISIconSupport *iconSupport = [ISIconSupport sharedInstance];
@@ -283,7 +286,6 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
             // No IconSupport-enabled extensions are in use; use default path
             path = defaultPath;
         } else {
-            NSFileManager *manager = [NSFileManager defaultManager];
             if (![manager fileExistsAtPath:iconSupportPath]) {
                 // IconSupport state file does not exist; use default (Safe Mode) file
                 [manager copyItemAtPath:defaultPath toPath:iconSupportPath error:NULL];

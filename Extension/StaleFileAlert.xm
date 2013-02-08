@@ -7,23 +7,21 @@
 
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
     if (alertView == [self alertSheet]) {
+        NSString *staleStateFilePath = @"/var/mobile/Library/SpringBoard/IconSupportState.plist.stale";
+
         NSString *message = nil;
         if (buttonIndex == 0) {
-            // Delete the old state file
-            [[NSFileManager defaultManager] removeItemAtPath:@"/var/mobile/Library/SpringBoard/IconSupportState.plist" error:NULL];
-
-            // Apply the standard state file
-            NSDictionary *iconState = [NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/SpringBoard/IconState.plist"];
+            message = @"The layout has been deleted.";
+        } else {
+            // Apply the old state file
+            NSDictionary *iconState = [NSDictionary dictionaryWithContentsOfFile:staleStateFilePath];
             [[ISIconSupport sharedInstance] repairAndReloadIconState:iconState];
 
-            message = @"The file has been deleted.";
-        } else {
-            message = @"The file will be used.";
+            message = @"The layout has been applied.";
         }
 
-        // Record that the old state file has been handled
-        CFPreferencesSetAppValue((CFStringRef)kHasOldStateFile, [NSNumber numberWithBool:NO], CFSTR(APP_ID));
-        CFPreferencesAppSynchronize(CFSTR(APP_ID));
+        // Delete the old state file
+        [[NSFileManager defaultManager] removeItemAtPath:staleStateFilePath error:NULL];
 
         // Show an alert stating the result
         UIAlertView *view = [[UIAlertView alloc] initWithTitle:@"IconSupport Warning" message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
