@@ -96,7 +96,16 @@ __attribute__((constructor)) static void init() {
         NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
         if ([bundleId isEqualToString:@"com.apple.Preferences"]) {
             // NOTE: These hooks should only be loaded for Preferences.app (Settings)
-            %init;
+            CFPropertyListRef propList = CFPreferencesCopyAppValue(CFSTR("ISLastUsed"), CFSTR("com.apple.springboard"));
+            if (propList != NULL) {
+                if (CFGetTypeID(propList) == CFStringGetTypeID()) {
+                    if (![(NSString *)propList isEqualToString:@""]) {
+                        // IconSupport is in use; initialize hooks
+                        %init;
+                    }
+                }
+                CFRelease(propList);
+            }
         } else if ([bundleId isEqualToString:@"com.apple.springboard"]) {
             // Add observer for notifications from Preferences.app
             CFNotificationCenterAddObserver(
