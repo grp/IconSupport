@@ -1,4 +1,73 @@
+#include <notify.h>
+
+#import "ISIconSupport.h"
+
+static char kIconLayoutActionSheet;
+
 %hook ResetPrefController
+
+- (id)loadSpecifiersFromPlistName:(id)plistName target:(id)target {
+    NSMutableArray *specifiers = [NSMutableArray array];
+    for (id specifier in %orig) {
+        // Search for the "Reset Home Screen Layout" specifier
+        if ([[specifier identifier] isEqualToString:@"RESET_ICONS_LABEL"]) {
+            // Replace specifier with one that will call our method
+            // NOTE: The original is of class PSConfirmationSpecifier, which
+            //       will cause a plist-defined action sheet to be shown before
+            //       the method is called. Thus the specifier must be replaced
+            //       instead of simply modified.
+            PSSpecifier *replacement = [objc_getClass("PSSpecifier")
+                preferenceSpecifierNamed:[specifier name]
+                target:[specifier target]
+                set:MSHookIvar<SEL>(specifier, "setter")
+                get:MSHookIvar<SEL>(specifier, "getter")
+                detail:[specifier detailControllerClass]
+                cell:[specifier cellType]
+                edit:[specifier editPaneClass]
+                ];
+            [replacement setIdentifier:[specifier identifier]];
+            [replacement setButtonAction:@selector(showLayoutPicker:)];
+            [specifiers addObject:replacement];
+        } else {
+            [specifiers addObject:specifier];
+        }
+    }
+
+    return specifiers;
+}
+
+%new
+- (void)showLayoutPicker:(id)sender
+{
+    UIActionSheet *sheet = [[UIActionSheet alloc]
+        initWithTitle:@"Select the home screen layout to apply.\n\nThis will overwrite your current layout and cannot be undone."
+        delegate:(id)self cancelButtonTitle:@"Cancel" destructiveButtonTitle:nil
+        otherButtonTitles:@"Factory Defaults", @"Safe Mode", nil];
+    [sheet showInView:[self view]];
+
+    // Store the action sheet for later comparison
+    objc_setAssociatedObject(self, &kIconLayoutActionSheet, sheet, OBJC_ASSOCIATION_RETAIN);
+    [sheet release];
+}
+
+- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    UIActionSheet *sheet = objc_getAssociatedObject(self, &kIconLayoutActionSheet);
+    if (sheet == actionSheet) {
+        if (buttonIndex == 0) {
+            // Factory Defaults
+            [self resetIconPositions:[self specifierForID:@"RESET_ICONS_LABEL"]];
+        } else if (buttonIndex == 1) {
+            // Safe Mode
+            notify_post(APP_ID".layout.safemode");
+        }
+
+        // Release the sheet
+        objc_setAssociatedObject(self, &kIconLayoutActionSheet, nil, OBJC_ASSOCIATION_RETAIN);
+    } else {
+        %orig;
+    }
+}
 
 - (void)resetIconPositions:(id)sender {
     NSString *path = @"/var/mobile/Library/SpringBoard/IconSupportState.plist";
@@ -8,15 +77,32 @@
 
 %end
 
+//==============================================================================
+
+static void importLayoutSafeMode(CFNotificationCenterRef center, void *observer,
+    CFStringRef name, const void *object, CFDictionaryRef userInfo)
+{
+    NSDictionary *iconState = [NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/SpringBoard/IconState.plist"];
+    [[ISIconSupport sharedInstance] repairAndReloadIconState:iconState];
+}
+
+//==============================================================================
+
 __attribute__((constructor)) static void init() {
     // Only hook for iOS 4 or newer
     if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_4_0) {
         NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
-        // NOTE: This library should only be loaded for Preferences.app (Settings)
         NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
         if ([bundleId isEqualToString:@"com.apple.Preferences"]) {
+            // NOTE: These hooks should only be loaded for Preferences.app (Settings)
             %init;
+        } else if ([bundleId isEqualToString:@"com.apple.springboard"]) {
+            // Add observer for notifications from Preferences.app
+            CFNotificationCenterAddObserver(
+                    CFNotificationCenterGetDarwinNotifyCenter(),
+                    NULL, importLayoutSafeMode, CFSTR(APP_ID".layout.safemode"),
+                    NULL, 0);
         }
 
         [pool release];

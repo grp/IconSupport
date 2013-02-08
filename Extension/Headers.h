@@ -67,6 +67,28 @@
 - (void)noteIconStateChangedExternally;
 @end
 
+@interface PSSpecifier : NSObject {
+    SEL getter;
+    SEL setter;
+}
+@property(assign, nonatomic) SEL buttonAction;
+@property(assign, nonatomic) int cellType;
+@property(assign, nonatomic) Class detailControllerClass;
+@property(assign, nonatomic) Class editPaneClass;
+@property(retain, nonatomic) NSString *identifier;
+@property(retain, nonatomic) NSString *name;
+@property(assign, nonatomic) id target;
++ (id)preferenceSpecifierNamed:(id)named target:(id)target set:(SEL)set get:(SEL)get detail:(Class)detail cell:(int)cell edit:(Class)edit;
+@end
+
+@interface PSViewController : UIViewController @end
+@interface PSListController : PSViewController
+- (id)specifierForID:(id)anId;
+@end
+@interface ResetPrefController : PSListController
+- (void)resetIconPositions:(id)positions;
+@end
+
 #endif // ICONSUPPORT_HEADERS_H_
 
 /* vim: set filetype=objcpp sw=4 ts=4 expandtab tw=80 ff=unix: */
