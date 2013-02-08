@@ -1,4 +1,6 @@
-#include "ISIconSupport.h"
+#import "ISStaleFileAlertItem.h"
+
+#import "ISIconSupport.h"
 #include "PreferenceConstants.h"
 
 @interface ISStaleFileAlertItem : SBAlertItem @end
@@ -84,7 +86,7 @@
 
 //==============================================================================
 
-void initStaleFileAlert() {
+void initISStaleFileAlertItem() {
     // Register new subclass
     Class $SuperClass = objc_getClass("SBAlertItem");
     if ($SuperClass != Nil) {

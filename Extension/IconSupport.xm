@@ -1,7 +1,7 @@
 // Updated for iOS4 by Sakurina and chpwn.
 
 #import "ISIconSupport.h"
-#import "StaleFileAlert.h"
+#import "ISStaleFileAlertItem.h"
 
 #include <substrate.h>
 #include "PreferenceConstants.h"
@@ -230,7 +230,7 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
     if ([manager fileExistsAtPath:staleStateFilePath]) {
         // An old state file exists; ask user whether to use or delete it.
         // NOTE: This should only happen after an install, not an upgrade.
-        initStaleFileAlert();
+        initISStaleFileAlertItem();
 
         SBAlertItem *alert = [[objc_getClass("ISStaleFileAlertItem") alloc] init];
         if (alert != nil) {
