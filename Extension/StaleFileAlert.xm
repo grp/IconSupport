@@ -83,20 +83,6 @@
 
 //==============================================================================
 
-%hook SpringBoard
-
-- (void)applicationDidFinishLaunching:(id)application {
-    %orig;
-
-    SBAlertItem *alert = [[objc_getClass("ISStaleFileAlertItem") alloc] init];
-    [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
-    [alert release];
-}
-
-%end
-
-//==============================================================================
-
 void initStaleFileAlert() {
     // Register new subclass
     Class $SuperClass = objc_getClass("SBAlertItem");

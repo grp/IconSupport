@@ -225,6 +225,12 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
         // An old state file exists; ask user whether to use or delete it.
         // NOTE: This should only happen after an install, not an upgrade.
         initStaleFileAlert();
+
+        SBAlertItem *alert = [[objc_getClass("ISStaleFileAlertItem") alloc] init];
+        if (alert != nil) {
+            [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
+            [alert release];
+        }
     } else {
         // FIXME: Avoid hard-coding paths, as they may change in future firmware.
         NSString *basePath = @"/var/mobile/Library/SpringBoard";
