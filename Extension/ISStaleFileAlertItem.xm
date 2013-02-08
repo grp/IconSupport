@@ -8,28 +8,29 @@
 %hook ISStaleFileAlertItem
 
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-    if (alertView == [self alertSheet]) {
-        NSString *staleStateFilePath = @"/var/mobile/Library/SpringBoard/IconSupportState.plist.stale";
+    NSString *staleStateFilePath = @"/var/mobile/Library/SpringBoard/IconSupportState.plist.stale";
 
-        NSString *message = nil;
-        if (buttonIndex == 0) {
-            message = @"The layout has been deleted.";
-        } else {
-            // Apply the old state file
-            NSDictionary *iconState = [NSDictionary dictionaryWithContentsOfFile:staleStateFilePath];
-            [[ISIconSupport sharedInstance] repairAndReloadIconState:iconState];
+    NSString *message = nil;
+    if (buttonIndex == 0) {
+        message = @"The layout has been deleted.";
+    } else {
+        // Apply the old state file
+        NSDictionary *iconState = [NSDictionary dictionaryWithContentsOfFile:staleStateFilePath];
+        [[ISIconSupport sharedInstance] repairAndReloadIconState:iconState];
 
-            message = @"The layout has been restored.";
-        }
-
-        // Delete the old state file
-        [[NSFileManager defaultManager] removeItemAtPath:staleStateFilePath error:NULL];
-
-        // Show an alert stating the result
-        UIAlertView *view = [[UIAlertView alloc] initWithTitle:@"IconSupport" message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
-        [view show];
-        [view release];
+        message = @"The layout has been restored.";
     }
+
+    // Delete the old state file
+    [[NSFileManager defaultManager] removeItemAtPath:staleStateFilePath error:NULL];
+
+    // Inform the user of the result
+    UIAlertView *view = [[UIAlertView alloc] initWithTitle:@"IconSupport" message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+    [view show];
+    [view release];
+
+    // Call original implementation to dismiss the alert item
+    %orig;
 }
 
 - (void)configure:(BOOL)configure requirePasscodeForActions:(BOOL)require {
