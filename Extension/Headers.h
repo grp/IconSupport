@@ -79,6 +79,7 @@
 @property(retain, nonatomic) NSString *name;
 @property(assign, nonatomic) id target;
 + (id)preferenceSpecifierNamed:(id)named target:(id)target set:(SEL)set get:(SEL)get detail:(Class)detail cell:(int)cell edit:(Class)edit;
+- (void)setProperty:(id)property forKey:(id)key;
 @end
 
 @interface PSViewController : UIViewController @end

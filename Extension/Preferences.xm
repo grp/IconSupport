@@ -18,15 +18,20 @@ static char kIconLayoutActionSheet;
             //       instead of simply modified.
             PSSpecifier *replacement = [objc_getClass("PSSpecifier")
                 preferenceSpecifierNamed:[specifier name]
-                target:[specifier target]
+                target:MSHookIvar<id>(specifier, "target")
                 set:MSHookIvar<SEL>(specifier, "setter")
                 get:MSHookIvar<SEL>(specifier, "getter")
-                detail:[specifier detailControllerClass]
-                cell:[specifier cellType]
-                edit:[specifier editPaneClass]
+                detail:MSHookIvar<Class>(specifier, "detailControllerClass")
+                cell:MSHookIvar<int>(specifier, "cellType")
+                edit:MSHookIvar<Class>(specifier, "editPaneClass")
                 ];
-            [replacement setIdentifier:[specifier identifier]];
-            [replacement setButtonAction:@selector(showLayoutPicker:)];
+            [replacement setProperty:[specifier identifier] forKey:@"id"];
+            if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_6_0) {
+                SEL &action = MSHookIvar<SEL>(replacement, "action");
+                action = @selector(showLayoutPicker:);
+            } else {
+                [replacement setButtonAction:@selector(showLayoutPicker:)];
+            }
             [specifiers addObject:replacement];
         } else {
             [specifiers addObject:specifier];
