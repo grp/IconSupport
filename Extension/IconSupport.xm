@@ -20,10 +20,7 @@
 
 static BOOL hasSubfolderSupport_ = NO;
 
-// Number of lists in a folder may exceed maxLists; gather orphaned icons for later redistribution
-static NSMutableArray *orphanedIcons_ = nil;
-
-static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRootFolder, BOOL isDock) {
+static NSDictionary * repairFolderIconState(NSDictionary *folderState, NSMutableArray *orphanedIcons, BOOL isRootFolder, BOOL isDock) {
     NSMutableArray *iconLists = [[NSMutableArray alloc] init];
 
     NSArray *currentIconLists = [folderState objectForKey:@"iconLists"];
@@ -35,12 +32,6 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRo
         [iconLists addObject:array];
         [array release];
     } else {
-        // If this is the root folder or the dock, create global orphaned icons array
-        if (isRootFolder || isDock) {
-            // NOTE: Root folder and dock are processed separately.
-            orphanedIcons_ = [[NSMutableArray alloc] init];
-        }
-
         // Determine icon, list limits for the given folder
         // NOTE: Must create an instance of the folder to determine the list model class.
         // FIXME: If handling of special folders is ever added, this part will
@@ -72,7 +63,7 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRo
                 if ([item isKindOfClass:$NSDictionary] &&
                     [[item objectForKey:@"listType"] isEqualToString:@"folder"]) {
                     // Update the icon state for the subfolder
-                    NSDictionary *subFolderState = repairFolderIconState(item, NO, NO);
+                    NSDictionary *subFolderState = repairFolderIconState(item, orphanedIcons, NO, NO);
 
                     // Remove the old folder
                     [iconList removeObjectAtIndex:i];
@@ -83,7 +74,7 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRo
                     } else {
                         // Subfolders not supported; orphan the icons for redistribution
                         for (NSArray *subList in [subFolderState objectForKey:@"iconLists"]) {
-                            [orphanedIcons_ addObjectsFromArray:subList];
+                            [orphanedIcons addObjectsFromArray:subList];
                         }
 
                         // As the removed folder was not replaced, must decrement icon count and counter
@@ -99,9 +90,9 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRo
         }
 
         // Add any orphaned icons as a single list to end of folder
-        if ([orphanedIcons_ count] != 0) {
-            [iconLists addObject:[NSMutableArray arrayWithArray:orphanedIcons_]];
-            [orphanedIcons_ removeAllObjects];
+        if ([orphanedIcons count] != 0) {
+            [iconLists addObject:[NSMutableArray arrayWithArray:orphanedIcons]];
+            [orphanedIcons removeAllObjects];
         }
 
         // Compact lists down to allowed maximum number of lists for this folder
@@ -145,18 +136,10 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, BOOL isRo
                         numOfIconLists++;
                     } else {
                         // List limit reached; add surplus icons to orphaned icons list
-                        [orphanedIcons_ addObjectsFromArray:surplusIcons];
+                        [orphanedIcons addObjectsFromArray:surplusIcons];
                     }
                 }
             }
-        }
-
-        // If this is the root folder or the dock, free the global orphaned icons array
-        // NOTE: Any remaining icons will be lost in the ether
-        //       (but still accessible via Spotlight).
-        if (isRootFolder || isDock) {
-            [orphanedIcons_ release];
-            orphanedIcons_ = nil;
         }
     }
 
@@ -177,11 +160,22 @@ NSDictionary * repairIconState(NSDictionary *iconState) {
     NSDictionary *dockIconState = [NSDictionary dictionaryWithObject:dock forKey:@"iconLists"];
     [dock release];
 
+    // Create an array to hold orphaned icons
+    // NOTE: The number of lists in a folder may exceed the allowed maximum;
+    //       orphaned icons will be gathered for later redistribution.
+    NSMutableArray *orphanedIcons = [[NSMutableArray alloc] init];
+
     // Repair icon list for the dock
-    dockIconState = repairFolderIconState(dockIconState, NO, YES);
+    dockIconState = repairFolderIconState(dockIconState, orphanedIcons, NO, YES);
 
     // Repair icon lists for the root folder
-    iconState = repairFolderIconState(iconState, YES, NO);
+    iconState = repairFolderIconState(iconState, orphanedIcons, YES, NO);
+
+    // Free the orphaned icons array
+    // NOTE: Any remaining icons will be lost in the ether
+    //       (but still accessible via Spotlight).
+    [orphanedIcons release];
+    orphanedIcons = nil;
 
     // Combine fixed dock and lists
     iconState = [[iconState mutableCopy] autorelease];
