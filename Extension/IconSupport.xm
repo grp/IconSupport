@@ -68,7 +68,7 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, NSMutable
                     // Remove the old folder
                     [iconList removeObjectAtIndex:i];
 
-                    if (isRootFolder || hasSubfolderSupport_) {
+                    if (isRootFolder || isDock || hasSubfolderSupport_) {
                         // Insert fixed-up folder in place of old folder
                         [iconList insertObject:subFolderState atIndex:i];
                     } else {
