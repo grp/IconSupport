@@ -49,6 +49,7 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, NSMutable
         [folder release];
 
         // Look for and process any subfolders
+        BOOL supportsListTypes = (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_5_0);
         for (NSArray *list in currentIconLists) {
             // Make a mutable copy of the list for modification
             NSMutableArray *iconList = [list mutableCopy];
@@ -61,7 +62,7 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, NSMutable
                 // FIXME: Is it actually necessary to skip these folders?
                 id item = [iconList objectAtIndex:i];
                 if ([item isKindOfClass:$NSDictionary] &&
-                    [[item objectForKey:@"listType"] isEqualToString:@"folder"]) {
+                    (!supportsListTypes || [[item objectForKey:@"listType"] isEqualToString:@"folder"])) {
                     // Update the icon state for the subfolder
                     NSDictionary *subFolderState = repairFolderIconState(item, orphanedIcons, NO, NO);
 
