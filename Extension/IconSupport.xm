@@ -296,8 +296,11 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
         // Repair, if necessary
         if (needsRepair) {
             id iconState = [NSDictionary dictionaryWithContentsOfFile:path];
-            iconState = repairIconState(iconState);
-            [iconState writeToFile:path atomically:YES];
+            id repairedState = repairIconState(iconState);
+            if (![repairedState isEqual:iconState]) {
+                // Store the repaired state
+                [repairedState writeToFile:path atomically:YES];
+            }
         }
     }
 
