@@ -73,18 +73,16 @@ static ISIconSupport *sharedSupport = nil;
         return;
     }
 
-    NSDictionary *newIconState = repairIconState(iconState);
-    if (![newIconState isEqual:iconState]) {
-        if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_6_0) {
-            // iOS 4.x or iOS 5.x
-            SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
-            [newIconState writeToFile:[iconModel iconStatePath] atomically:YES];
-            [iconModel noteIconStateChangedExternally];
-        } else {
-            // iOS 6.x+
-            [newIconState writeToFile:[[[objc_getClass("SBDefaultIconModelStore") sharedInstance] currentIconStateURL] path] atomically:YES];
-            [[objc_getClass("SBIconController") sharedInstance] noteIconStateChangedExternally];
-        }
+    iconState = repairIconState(iconState);
+    if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_6_0) {
+        // iOS 4.x or iOS 5.x
+        SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
+        [iconState writeToFile:[iconModel iconStatePath] atomically:YES];
+        [iconModel noteIconStateChangedExternally];
+    } else {
+        // iOS 6.x+
+        [iconState writeToFile:[[[objc_getClass("SBDefaultIconModelStore") sharedInstance] currentIconStateURL] path] atomically:YES];
+        [[objc_getClass("SBIconController") sharedInstance] noteIconStateChangedExternally];
     }
 }
 
