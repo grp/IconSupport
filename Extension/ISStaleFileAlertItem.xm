@@ -23,7 +23,7 @@
     [[NSFileManager defaultManager] removeItemAtPath:staleStateFilePath error:NULL];
 
     // Inform the user of the result
-    UIAlertView *view = [[UIAlertView alloc] initWithTitle:@"IconSupport" message:message delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
+    UIAlertView *view = [[UIAlertView alloc] initWithTitle:@"IconSupport" message:message delegate:nil cancelButtonTitle:@"Dismiss" otherButtonTitles:nil];
     [view show];
     [view release];
 

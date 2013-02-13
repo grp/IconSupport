@@ -10,7 +10,7 @@
     [alertView setDelegate:self];
     [alertView setTitle:title];
     [alertView setMessage:body];
-    [alertView addButtonWithTitle:@"OK"];
+    [alertView addButtonWithTitle:@"Dismiss"];
 }
 
 %end
