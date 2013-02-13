@@ -1,6 +1,7 @@
 // Updated for iOS4 by Sakurina and chpwn.
 
 #import "ISIconSupport.h"
+#import "ISLayoutRepairedAlertItem.h"
 #import "ISStaleFileAlertItem.h"
 
 #include <substrate.h>
@@ -300,6 +301,12 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
             if (![repairedState isEqual:iconState]) {
                 // Store the repaired state
                 [repairedState writeToFile:path atomically:YES];
+
+                // Inform user that layout has been modified
+                initISLayoutRepairedAlertItem();
+                SBAlertItem  *alert = [[objc_getClass("ISLayoutRepairedAlertItem") alloc] init];
+                [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
+                [alert release];
             }
         }
     }
