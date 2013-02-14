@@ -176,7 +176,6 @@ NSDictionary * repairIconState(NSDictionary *iconState) {
     // NOTE: Any remaining icons will be lost in the ether
     //       (but still accessible via Spotlight).
     [orphanedIcons release];
-    orphanedIcons = nil;
 
     // Combine fixed dock and lists
     iconState = [[iconState mutableCopy] autorelease];
