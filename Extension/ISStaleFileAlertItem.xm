@@ -6,7 +6,8 @@
 %hook ISStaleFileAlertItem
 
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-    NSString *staleStateFilePath = @"/var/mobile/Library/SpringBoard/IconSupportState.plist.stale";
+    NSString *userPath = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+    NSString *staleStateFilePath = [userPath stringByAppendingPathComponent:@"SpringBoard/IconSupportState.plist.stale"];
 
     NSString *message = nil;
     if (buttonIndex == 0) {

@@ -219,7 +219,8 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
 
 - (id)init {
     // FIXME: Avoid hard-coding paths, as they may change in future firmware.
-    NSString *basePath = @"/var/mobile/Library/SpringBoard";
+    NSString *userPath = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+    NSString *basePath = [userPath stringByAppendingPathComponent:@"SpringBoard"];
     NSString *iconSupportPath = [basePath stringByAppendingPathComponent:kFilenameState];
     NSString *staleStateFilePath = [iconSupportPath stringByAppendingString:@".stale"];
 
@@ -227,13 +228,13 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
     if ([manager fileExistsAtPath:staleStateFilePath]) {
         // An old state file exists; ask user whether to use or delete it.
         // NOTE: This should only happen after an install, not an upgrade.
-        initISStaleFileAlertItem();
+                initISStaleFileAlertItem();
 
-        SBAlertItem *alert = [[objc_getClass("ISStaleFileAlertItem") alloc] init];
-        if (alert != nil) {
-            [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
-            [alert release];
-        }
+                SBAlertItem *alert = [[objc_getClass("ISStaleFileAlertItem") alloc] init];
+                if (alert != nil) {
+                    [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
+                    [alert release];
+                }
     } else {
         NSString *defaultPath = [basePath stringByAppendingPathComponent:@"IconState.plist"];
 
@@ -299,12 +300,12 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
                 [repairedState writeToFile:path atomically:YES];
 
                 // Inform user that layout has been modified
-                initISLayoutRepairedAlertItem();
-                SBAlertItem  *alert = [[objc_getClass("ISLayoutRepairedAlertItem") alloc] init];
-                [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
-                [alert release];
-            }
-        }
+                        initISLayoutRepairedAlertItem();
+                        SBAlertItem *alert = [[objc_getClass("ISLayoutRepairedAlertItem") alloc] init];
+                            [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
+                            [alert release];
+                        }
+                    }
     }
 
     return %orig;

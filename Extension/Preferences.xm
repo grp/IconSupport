@@ -75,8 +75,9 @@ static char kIconLayoutActionSheet;
 }
 
 - (void)resetIconPositions:(id)sender {
-    NSString *path = @"/var/mobile/Library/SpringBoard/IconSupportState.plist";
-    [[NSFileManager defaultManager] removeItemAtPath:path error:NULL];
+    NSString *userPath = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+    NSString *iconSupportPath = [userPath stringByAppendingPathComponent:@"SpringBoard/IconSupportState.plist"];
+    [[NSFileManager defaultManager] removeItemAtPath:iconSupportPath error:NULL];
     %orig;
 }
 
