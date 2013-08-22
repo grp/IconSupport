@@ -19,11 +19,13 @@
 // iOS 4.x+
 @interface SBIconListModel : NSObject
 + (int)maxIcons;
+//+ (unsigned)maxIcons; // iOS 4.2+
 @end
 @interface SBDockIconListModel : SBIconListModel @end
 
 @interface SBFolder : NSObject
 + (int)maxListCount;
+//+ (unsigned)maxListCount; // iOS 7.0+
 - (Class)listModelClass;
 @end
 @interface SBRootFolder : SBFolder
@@ -53,12 +55,11 @@
 @interface SBIconController : NSObject
 + (id)sharedInstance;
 @end
-@interface SBIconController (GFirmware_GTE_60)
+@interface SBIconController (Firmware_GTE_60)
 - (void)noteIconStateChangedExternally;
 @end
 
 @interface SBIconModel : NSObject
-+ (id)sharedInstance;
 - (id)iconState;
 @end
 @interface SBIconModel (Firmware_LT_40)
@@ -66,10 +67,11 @@
 @property(readonly, retain) NSMutableArray *iconLists;
 - (void)compactIconLists;
 @end
-@interface SBIconModel (Firmware_GTE_40)
+@interface SBIconModel (Firmware_GTE_40_LT_60)
 - (id)iconStatePath;
 @end
-@interface SBIconModel (GFirmware_LT_60)
+@interface SBIconModel (Firmware_LT_60)
++ (id)sharedInstance;
 - (void)noteIconStateChangedExternally;
 @end
 
