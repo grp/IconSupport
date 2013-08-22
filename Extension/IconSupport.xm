@@ -228,6 +228,12 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
     if ([manager fileExistsAtPath:staleStateFilePath]) {
         // An old state file exists; ask user whether to use or delete it.
         // NOTE: This should only happen after an install, not an upgrade.
+        // NOTE: Perform after a delay to prevent issues with more recent iOS
+        //       versions (apparently due to the call to sharedInstance).
+        double delayInSeconds = 0.1;
+        dispatch_time_t time = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
+        dispatch_after(time, dispatch_get_main_queue(),
+            ^(void) {
                 initISStaleFileAlertItem();
 
                 SBAlertItem *alert = [[objc_getClass("ISStaleFileAlertItem") alloc] init];
@@ -235,6 +241,8 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
                     [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
                     [alert release];
                 }
+            }
+        );
     } else {
         NSString *defaultPath = [basePath stringByAppendingPathComponent:@"IconState.plist"];
 
@@ -300,12 +308,23 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
                 [repairedState writeToFile:path atomically:YES];
 
                 // Inform user that layout has been modified
+                // NOTE: Perform after a delay to prevent issues with more recent iOS
+                //       versions (apparently due to the call to sharedInstance).
+                double delayInSeconds = 0.1;
+                dispatch_time_t time = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
+                dispatch_after(time, dispatch_get_main_queue(),
+                    ^(void) {
                         initISLayoutRepairedAlertItem();
+
                         SBAlertItem *alert = [[objc_getClass("ISLayoutRepairedAlertItem") alloc] init];
+                        if (alert != nil) {
                             [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
                             [alert release];
                         }
                     }
+                );
+            }
+        }
     }
 
     return %orig;
