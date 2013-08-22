@@ -1,6 +1,12 @@
 #ifndef ICONSUPPORT_HEADERS_H_
 #define ICONSUPPORT_HEADERS_H_
 
+/**
+ * AppID: com.apple.SpringBoard
+ */
+
+// iOS 3.2 ~ iOS 6.x
+// NOTE: Only used in "classic" version of IconSupport.
 @interface UIDevice (UIDevicePrivate)
 - (BOOL)isWildcat;
 @end
@@ -66,6 +72,10 @@
 @interface SBIconModel (GFirmware_LT_60)
 - (void)noteIconStateChangedExternally;
 @end
+
+/**
+ * AppID: com.apple.Preferences
+ */
 
 @interface PSSpecifier : NSObject {
     SEL getter;
