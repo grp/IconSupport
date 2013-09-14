@@ -18,18 +18,18 @@
 #define kFilenameState @"IconSupportState.plist"
 #define kFilenameDesiredState @"DesiredIconSupportState.plist"
 
-static NSMutableArray *queuedAlerts_ = nil;
+static NSMutableArray *queuedAlerts$ = nil;
 
 static void queueAlert(SBAlertItem *alert) {
-    if (queuedAlerts_ == nil) {
-        queuedAlerts_ = [[NSMutableArray alloc] init];
+    if (queuedAlerts$ == nil) {
+        queuedAlerts$ = [[NSMutableArray alloc] init];
     }
-    [queuedAlerts_ addObject:alert];
+    [queuedAlerts$ addObject:alert];
 }
 
 //------------------------------------------------------------------------------
 
-static BOOL hasSubfolderSupport_ = NO;
+static BOOL hasSubfolderSupport$ = NO;
 
 static NSDictionary * repairFolderIconState(NSDictionary *folderState, NSMutableArray *orphanedIcons, BOOL isRootFolder, BOOL isDock) {
     NSMutableArray *iconLists = [[NSMutableArray alloc] init];
@@ -80,7 +80,7 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, NSMutable
                     // Remove the old folder
                     [iconList removeObjectAtIndex:i];
 
-                    if (isRootFolder || isDock || hasSubfolderSupport_) {
+                    if (isRootFolder || isDock || hasSubfolderSupport$) {
                         // Insert fixed-up folder in place of old folder
                         [iconList insertObject:subFolderState atIndex:i];
                     } else {
@@ -451,13 +451,13 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
     // Display any queued alerts
     // NOTE: Perform here to prevent issues with more recent iOS versions
     //       (apparently due to the call to +[SBAlertItemsController sharedInstance]).
-    if (queuedAlerts_ != nil) {
+    if (queuedAlerts$ != nil) {
         SBAlertItemsController *controller = [objc_getClass("SBAlertItemsController") sharedInstance];
-        for (SBAlertItem *alert in queuedAlerts_) {
+        for (SBAlertItem *alert in queuedAlerts$) {
             [controller activateAlertItem:alert];
         }
-        [queuedAlerts_ release];
-        queuedAlerts_ = nil;
+        [queuedAlerts$ release];
+        queuedAlerts$ = nil;
     }
 }
 
@@ -490,7 +490,7 @@ __attribute__((constructor)) static void init() {
 
             // FIXME: Find a better way to detect if subfolders are supported.
             NSFileManager *manager = [NSFileManager defaultManager];
-            hasSubfolderSupport_ =
+            hasSubfolderSupport$ =
                 [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FolderEnhancer.dylib"] ||
                 [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FoldersInFolders.dylib"];
         }
