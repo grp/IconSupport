@@ -18,6 +18,17 @@
 #define kFilenameState @"IconSupportState.plist"
 #define kFilenameDesiredState @"DesiredIconSupportState.plist"
 
+static NSMutableArray *queuedAlerts_ = nil;
+
+static void queueAlert(SBAlertItem *alert) {
+    if (queuedAlerts_ == nil) {
+        queuedAlerts_ = [[NSMutableArray alloc] init];
+    }
+    [queuedAlerts_ addObject:alert];
+}
+
+//------------------------------------------------------------------------------
+
 static BOOL hasSubfolderSupport_ = NO;
 
 static NSDictionary * repairFolderIconState(NSDictionary *folderState, NSMutableArray *orphanedIcons, BOOL isRootFolder, BOOL isDock) {
@@ -228,21 +239,13 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
     if ([manager fileExistsAtPath:staleStateFilePath]) {
         // An old state file exists; ask user whether to use or delete it.
         // NOTE: This should only happen after an install, not an upgrade.
-        // NOTE: Perform after a delay to prevent issues with more recent iOS
-        //       versions (apparently due to the call to sharedInstance).
-        double delayInSeconds = 0.1;
-        dispatch_time_t time = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
-        dispatch_after(time, dispatch_get_main_queue(),
-            ^(void) {
-                initISStaleFileAlertItem();
+        initISStaleFileAlertItem();
 
-                SBAlertItem *alert = [[objc_getClass("ISStaleFileAlertItem") alloc] init];
-                if (alert != nil) {
-                    [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
-                    [alert release];
-                }
-            }
-        );
+        SBAlertItem *alert = [[objc_getClass("ISStaleFileAlertItem") alloc] init];
+        if (alert != nil) {
+            queueAlert(alert);
+            [alert release];
+        }
     } else {
         NSString *defaultPath = [basePath stringByAppendingPathComponent:@"IconState.plist"];
 
@@ -308,21 +311,13 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
                 [repairedState writeToFile:path atomically:YES];
 
                 // Inform user that layout has been modified
-                // NOTE: Perform after a delay to prevent issues with more recent iOS
-                //       versions (apparently due to the call to sharedInstance).
-                double delayInSeconds = 0.1;
-                dispatch_time_t time = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
-                dispatch_after(time, dispatch_get_main_queue(),
-                    ^(void) {
-                        initISLayoutRepairedAlertItem();
+                initISLayoutRepairedAlertItem();
 
-                        SBAlertItem *alert = [[objc_getClass("ISLayoutRepairedAlertItem") alloc] init];
-                        if (alert != nil) {
-                            [[objc_getClass("SBAlertItemsController") sharedInstance] activateAlertItem:alert];
-                            [alert release];
-                        }
-                    }
-                );
+                SBAlertItem *alert = [[objc_getClass("ISLayoutRepairedAlertItem") alloc] init];
+                if (alert != nil) {
+                    queueAlert(alert);
+                    [alert release];
+                }
             }
         }
     }
@@ -445,6 +440,28 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
 }
 
 %end %end
+
+//==============================================================================
+
+%hook SpringBoard
+
+- (void)applicationDidFinishLaunching:(UIApplication *)application {
+    %orig;
+
+    // Display any queued alerts
+    // NOTE: Perform here to prevent issues with more recent iOS versions
+    //       (apparently due to the call to +[SBAlertItemsController sharedInstance]).
+    if (queuedAlerts_ != nil) {
+        SBAlertItemsController *controller = [objc_getClass("SBAlertItemsController") sharedInstance];
+        for (SBAlertItem *alert in queuedAlerts_) {
+            [controller activateAlertItem:alert];
+        }
+        [queuedAlerts_ release];
+        queuedAlerts_ = nil;
+    }
+}
+
+%end
 
 //==============================================================================
 
