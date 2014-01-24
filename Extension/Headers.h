@@ -41,6 +41,23 @@
 + (id)sharedInstance;
 @end
 
+// iOS 7.x+
+@interface SBFolderSettings : NSObject // _UISettings
+// CALLED
+@property(nonatomic) BOOL allowNestedFolders;
+@end
+
+@interface SBPrototypeController : NSObject
+// CALLED
++ (id)sharedInstance;
+- (id)rootSettings;
+@end
+
+@interface SBRootSettings : NSObject // _UISettings
+// CALLED
+@property(retain) SBFolderSettings *folderSettings;
+@end
+
 // iOS (All versions)
 @interface SBAlertItem : NSObject <UIAlertViewDelegate>
 // NOTE: In iOS 3, this property is a UIModalView.

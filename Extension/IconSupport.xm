@@ -172,6 +172,12 @@ NSDictionary * repairIconState(NSDictionary *iconState) {
     //       orphaned icons will be gathered for later redistribution.
     NSMutableArray *orphanedIcons = [[NSMutableArray alloc] init];
 
+    if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_7_0) {
+        // NOTE: Check this value every time, as it could be changed mid-process
+        //       (via, for example, the hidden settings panel).
+        hasSubfolderSupport$ = [[[[objc_getClass("SBPrototypeController") sharedInstance] rootSettings] folderSettings] allowNestedFolders];
+    }
+
     // Repair icon list for the dock
     dockIconState = repairFolderIconState(dockIconState, orphanedIcons, NO, YES);
 
@@ -483,11 +489,13 @@ __attribute__((constructor)) static void init() {
                 }
             }
 
-            // FIXME: Find a better way to detect if subfolders are supported.
-            NSFileManager *manager = [NSFileManager defaultManager];
-            hasSubfolderSupport$ =
-                [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FolderEnhancer.dylib"] ||
-                [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FoldersInFolders.dylib"];
+            if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_7_0) {
+                // FIXME: Find a better way to detect if subfolders are supported.
+                NSFileManager *manager = [NSFileManager defaultManager];
+                hasSubfolderSupport$ =
+                    [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FolderEnhancer.dylib"] ||
+                    [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FoldersInFolders.dylib"];
+            }
         }
 
         [pool release];
