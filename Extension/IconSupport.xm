@@ -8,12 +8,7 @@
 #include "PreferenceConstants.h"
 
 #define kISiPhoneDefaultMaxIconsPerPage 16
-#define kISiPhoneDefaultColumnsPerPage 4
-#define kISiPhoneDefaultRowsPerPage 4
-
 #define kISiPadDefaultMaxIconsPerPage 20
-#define kISiPadDefaultColumnsPerPage 4
-#define kISiPadDefaultRowsPerPage 5
 
 #define kFilenameState @"IconSupportState.plist"
 #define kFilenameDesiredState @"DesiredIconSupportState.plist"
