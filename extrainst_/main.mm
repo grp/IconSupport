@@ -1,7 +1,7 @@
 /**
  * Description: Post install script for IconSupport
  * Author: Lance Fetters (aka. ashikase)
- * Last-modified: 2012-07-27 20:03:06
+ * Last-modified: 2014-01-29 00:16:28
  */
 
 #include "PreferenceConstants.h"
@@ -52,12 +52,22 @@ int main(int argc, char *argv[]) {
             if (strcmp(argv[1], "install") == 0) {
                 // This is a fresh install; note if an old state file exists
                 if ([manager fileExistsAtPath:stateFilePath]) {
-                    // Rename the state file to reflect that it is old
-                    // NOTE: The user will be asked whether or not they wish to use it.
-                    NSString *staleStateFilePath = [stateFilePath stringByAppendingString:@".stale"];
-                    [manager removeItemAtPath:staleStateFilePath error:NULL];
-                    [manager moveItemAtPath:stateFilePath toPath:staleStateFilePath error:NULL];
-                    printf("Moved %s to %s\n", [stateFilePath UTF8String], [staleStateFilePath UTF8String]);
+                    // Determine the age of the file.
+                    NSDictionary *attrib = [manager attributesOfItemAtPath:stateFilePath error:NULL];
+                    NSDate *date = [attrib fileModificationDate];
+                    if ((date != nil) && fabs([date timeIntervalSinceNow]) > 604800.0) {
+                        // More than a week old; delete the file.
+                        [manager removeItemAtPath:stateFilePath error:NULL];
+                        printf("Deleted %s\n", [stateFilePath UTF8String]);
+                    } else {
+                        // Less than (or equal to) a week old.
+                        // Rename the state file to reflect that it is old
+                        // NOTE: The user will be asked whether or not they wish to use it.
+                        NSString *staleStateFilePath = [stateFilePath stringByAppendingString:@".stale"];
+                        [manager removeItemAtPath:staleStateFilePath error:NULL];
+                        [manager moveItemAtPath:stateFilePath toPath:staleStateFilePath error:NULL];
+                        printf("Moved %s to %s\n", [stateFilePath UTF8String], [staleStateFilePath UTF8String]);
+                    }
                 }
             } else if (strcmp(argv[1], "upgrade") == 0) {
                 // Mark that an upgrade has occurred
