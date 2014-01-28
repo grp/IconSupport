@@ -3,7 +3,7 @@
 %hook ISLayoutRepairedAlertItem
 
 - (void)configure:(BOOL)configure requirePasscodeForActions:(BOOL)require {
-    NSString *title = @"IconSupport Warning";
+    NSString *title = @"IconSupport Notice";
     NSString *body = @"You have added or removed software that affects your icon layout.\n\nYour layout has been adjusted to prevent errors.";
 
     UIAlertView *alertView = [self alertSheet];
