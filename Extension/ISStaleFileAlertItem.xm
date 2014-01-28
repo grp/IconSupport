@@ -11,13 +11,13 @@
 
     NSString *message = nil;
     if (buttonIndex == 0) {
-        message = @"The layout has been deleted.";
-    } else {
         // Apply the old state file
         NSDictionary *iconState = [NSDictionary dictionaryWithContentsOfFile:staleStateFilePath];
         [[ISIconSupport sharedInstance] repairAndReloadIconState:iconState];
 
         message = @"The layout has been restored.";
+    } else {
+        message = @"The layout has been deleted.";
     }
 
     // Delete the old state file
@@ -35,15 +35,15 @@
 - (void)configure:(BOOL)configure requirePasscodeForActions:(BOOL)require {
     NSString *title = @"IconSupport Warning";
     NSString *body = @"An icon layout from a previous installation of IconSupport has been detected.\n\n"
-        "The layout may be quite old.\n\n"
-        "Do you wish to restore it?";
+        "The layout may be up to a week old.\n\n"
+        "Do you wish to restore or delete it?";
 
     UIAlertView *alertView = [self alertSheet];
     [alertView setDelegate:self];
     [alertView setTitle:title];
     [alertView setMessage:body];
-    [alertView addButtonWithTitle:@"Delete"];
     [alertView addButtonWithTitle:@"Restore"];
+    [alertView addButtonWithTitle:@"Delete"];
 }
 
 %end
