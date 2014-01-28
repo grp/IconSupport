@@ -1,5 +1,6 @@
 #import "ISIconSupport.h"
 
+#import "PreferenceConstants.h"
 #include <substrate.h>
 
 NSDictionary * repairIconState(NSDictionary *iconState);
@@ -84,6 +85,11 @@ static ISIconSupport *sharedSupport = nil;
         [iconState writeToFile:[[[objc_getClass("SBDefaultIconModelStore") sharedInstance] currentIconStateURL] path] atomically:YES];
         [[objc_getClass("SBIconController") sharedInstance] noteIconStateChangedExternally];
     }
+}
+
+- (void)repairIconStateOnNextRespring {
+    CFPreferencesSetAppValue((CFStringRef)kMarkedForRepair, [NSNumber numberWithBool:YES], CFSTR(APP_ID));
+    CFPreferencesAppSynchronize(CFSTR(APP_ID));
 }
 
 @end

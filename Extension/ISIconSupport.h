@@ -10,6 +10,7 @@
 - (BOOL)isBeingUsedByExtensions;
 - (void)repairAndReloadIconState;
 - (void)repairAndReloadIconState:(NSDictionary *)iconState;
+- (void)repairIconStateOnNextRespring;
 @end
 
 /* vim: set filetype=objcpp sw=4 ts=4 expandtab tw=80 ff=unix: */

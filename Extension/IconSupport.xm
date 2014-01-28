@@ -272,7 +272,14 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
     }
 
     // If number of extensions has changed, state will require repair
-    BOOL needsRepair = NO;
+    // NOTE: Also repair if a previous request has been scheduled.
+    BOOL needsRepair = boolForKey(kMarkedForRepair, NO);
+
+    if (needsRepair) {
+        // Was marked for repair; request has been received, remove it.
+        CFPreferencesSetAppValue((CFStringRef)kMarkedForRepair, NULL, CFSTR(APP_ID));
+        CFPreferencesAppSynchronize(CFSTR(APP_ID));
+    }
 
     // Compare the previous and new hash
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
