@@ -17,7 +17,8 @@
 @interface SBIconList : NSObject @end
 
 // iOS 4.x+
-@interface SBIconListModel : NSObject
+@interface SBIconListModel : NSObject @end
+@interface SBIconListModel (Firmware_LT_71)
 + (int)maxIcons;
 //+ (unsigned)maxIcons; // iOS 4.2+
 @end
@@ -74,6 +75,11 @@
 @end
 @interface SBIconController (Firmware_GTE_60)
 - (void)noteIconStateChangedExternally;
+@end
+@interface SBIconController (Firmware_GTE_71)
+- (NSUInteger)maxIconCountForDock;
+- (NSUInteger)maxIconCountForListInFolderClass:(Class)klass;
+- (NSUInteger)maxListCountForFolders;
 @end
 
 @interface SBIconModel : NSObject

@@ -44,15 +44,26 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, NSMutable
         //        need to be updated in order to process correct folder class.
         int maxLists, maxIcons;
         Class $FolderClass = (isRootFolder || isDock) ? objc_getClass("SBRootFolder") : objc_getClass("SBFolder");
-        SBFolder *folder = [[$FolderClass alloc] init];
-        if (isDock) {
-            maxLists = 1;
-            maxIcons = [[[(SBRootFolder *)folder dockModel] class] maxIcons];
+        if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_7_1) {
+            SBFolder *folder = [[$FolderClass alloc] init];
+            if (isDock) {
+                maxLists = 1;
+                maxIcons = [[[(SBRootFolder *)folder dockModel] class] maxIcons];
+            } else {
+                maxLists = [$FolderClass maxListCount];
+                maxIcons = [[folder listModelClass] maxIcons];
+            }
+            [folder release];
         } else {
-            maxLists = [$FolderClass maxListCount];
-            maxIcons = [[folder listModelClass] maxIcons];
+            SBIconController *iconCont = [objc_getClass("SBIconController") sharedInstance];
+            if (isDock) {
+                maxLists = 1;
+                maxIcons = [iconCont maxIconCountForDock];
+            } else {
+                maxLists = [iconCont maxListCountForFolders];
+                maxIcons = [iconCont maxIconCountForListInFolderClass:$FolderClass];
+            }
         }
-        [folder release];
 
         // Look for and process any subfolders
         BOOL supportsListTypes = (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_5_0);
