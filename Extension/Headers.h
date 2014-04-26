@@ -22,14 +22,15 @@
 + (int)maxIcons;
 //+ (unsigned)maxIcons; // iOS 4.2+
 @end
-@interface SBDockIconListModel : SBIconListModel @end
+@interface SBDockIconListModel : SBIconListModel @end // iOS 4.x ~ iOS 7.0.x
 
 @interface SBFolder : NSObject
 + (int)maxListCount;
 //+ (unsigned)maxListCount; // iOS 7.0+
 - (Class)listModelClass;
 @end
-@interface SBRootFolder : SBFolder
+@interface SBRootFolder : SBFolder @end
+@interface SBRootFolder (Firmware_GTE_40_LT_71)
 - (id)dockModel;
 @end
 
@@ -37,9 +38,6 @@
 @interface SBIconModelPropertyListFileStore : NSObject
 @property(retain, nonatomic) NSURL *currentIconStateURL;
 @property(retain, nonatomic) NSURL *desiredIconStateURL;
-@end
-@interface SBDefaultIconModelStore : SBIconModelPropertyListFileStore
-+ (id)sharedInstance;
 @end
 
 // iOS 7.x+
@@ -61,8 +59,8 @@
 
 // iOS (All versions)
 @interface SBAlertItem : NSObject <UIAlertViewDelegate>
-// NOTE: In iOS 3, this property is a UIModalView.
-@property(readonly, retain) UIAlertView *alertSheet;
+// NOTE: In iOS 3, this returns a UIModalView.
+- (UIAlertView *)alertSheet;
 @end
 
 @interface SBAlertItemsController : NSObject
