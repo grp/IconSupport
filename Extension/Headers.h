@@ -25,9 +25,11 @@
 @interface SBDockIconListModel : SBIconListModel @end // iOS 4.x ~ iOS 7.0.x
 
 @interface SBFolder : NSObject
-+ (int)maxListCount;
-//+ (unsigned)maxListCount; // iOS 7.0+
 - (Class)listModelClass;
+@end
+@interface SBFolder (Firmware_LT_71)
++ (int)maxListCount;
+//+ (unsigned)maxListCount; // iOS 7.0.x
 @end
 @interface SBRootFolder : SBFolder @end
 @interface SBRootFolder (Firmware_GTE_40_LT_71)
