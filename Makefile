@@ -1,4 +1,4 @@
-SUBPROJECTS ?= Extension extrainst_
+SUBPROJECTS ?= Extension/Loader Extension/3_0 Extension/4_0 extrainst_
 
 export APP_ID := com.chpwn.iconsupport
 export TARGET ?= iphone:7.0:3.0
