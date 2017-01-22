@@ -2,47 +2,120 @@
 #define ICONSUPPORT_HEADERS_H_
 
 /**
- * AppID: com.apple.SpringBoard
+ * Bundle: com.apple.SpringBoardUIFramework
  */
 
-// iOS 3.2 ~ iOS 6.x
-// NOTE: Only used in "classic" version of IconSupport.
-@interface UIDevice (UIDevicePrivate)
-- (BOOL)isWildcat;
+@interface SBAlertItem : NSObject <UIAlertViewDelegate>
+// CALLED
+- (UIAlertView *)alertSheet;
+// HOOKED
+- (BOOL)shouldShowInLockScreen;
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex;
+- (void)configure:(BOOL)configure requirePasscodeForActions:(BOOL)require;
+@end
+@interface SBAlertItem (Firmware_GTE_40_LT_50)
+// HOOKED
+- (void)didDeactivateForReason:(int)reason;
+@end
+@interface SBAlertItem (Firmware_GTE_50_LT_60)
+// HOOKED
+- (BOOL)reappearsAfterLock;
+@end
+@interface SBAlertItem (Firmware_GTE_60)
+// HOOKED
+- (BOOL)behavesSuperModally;
 @end
 
-// iOS 3.x
-@class SBButtonBar;
+/**
+ * Bundle: com.apple.SpringBoard
+ */
 
-@interface SBIconList : NSObject @end
-
-// iOS 4.x+
-@interface SBIconListModel : NSObject @end
-@interface SBIconListModel (Firmware_LT_71)
-+ (int)maxIcons;
-//+ (unsigned)maxIcons; // iOS 4.2+
+@interface SBAlertItemsController : NSObject
+// CALLED
++ (id)sharedInstance;
+- (void)activateAlertItem:(id)item;
 @end
-@interface SBDockIconListModel : SBIconListModel @end // iOS 4.x ~ iOS 7.0.x
 
 @interface SBFolder : NSObject
+// CALLED
 - (Class)listModelClass;
 @end
 @interface SBFolder (Firmware_LT_71)
+// CALLED
 + (int)maxListCount;
-//+ (unsigned)maxListCount; // iOS 7.0.x
+//+ (unsigned)maxListCount; // Firmware_GTE_70
 @end
 @interface SBRootFolder : SBFolder @end
 @interface SBRootFolder (Firmware_GTE_40_LT_71)
+// CALLED
 - (id)dockModel;
 @end
 
-// iOS 6.x+
+@interface SBIconController : NSObject
+// CALLED
++ (id)sharedInstance;
+// HOOKED
+- (id)init;
+@end
+@interface SBIconController (Firmware_GTE_60)
+// CALLED
+- (id)model;
+- (void)noteIconStateChangedExternally;
+@end
+@interface SBIconController (Firmware_GTE_71)
+// CALLED
+- (NSUInteger)maxIconCountForDock;
+- (NSUInteger)maxIconCountForListInFolderClass:(Class)klass;
+- (NSUInteger)maxListCountForFolders;
+@end
+
+@interface SBIconListModel : NSObject @end
+@interface SBIconListModel (Firmware_LT_71)
+// CALLED
++ (int)maxIcons;
+//+ (unsigned)maxIcons; // Firmware_GTE_42
+@end
+@interface SBDockIconListModel : SBIconListModel @end // Firmware_GTE_40_LT_70
+
+@interface SBIconModel : NSObject
+// CALLED
+- (id)iconState;
+// HOOKED
+- (BOOL)importState:(id)state;
+- (id)exportState:(BOOL)withFolders;
+@end
+@interface SBIconModel (Firmware_GTE_50_LT_60)
+// HOOKED
+- (id)_cachedIconStatePath;
+@end
+@interface SBIconModel (Firmware_LT_60)
+// CALLED
++ (id)sharedInstance;
+- (id)model;
+- (void)noteIconStateChangedExternally;
+
+// HOOKED
+- (id)iconStatePath;
+@end
+
+@interface SpringBoard : UIApplication
+// HOOKED
+- (void)applicationDidFinishLaunching:(UIApplication *)application;
+@end
+
+// Firmware_GTE_60
 @interface SBIconModelPropertyListFileStore : NSObject
+// CALLED
 @property(retain, nonatomic) NSURL *currentIconStateURL;
 @property(retain, nonatomic) NSURL *desiredIconStateURL;
 @end
 
-// iOS 7.x+
+@interface SBDefaultIconModelStore : SBIconModelPropertyListFileStore
+// HOOKED
+- (id)init;
+@end
+
+// Firmware_GTE_70
 @interface SBFolderSettings : NSObject // _UISettings
 // CALLED
 @property(nonatomic) BOOL allowNestedFolders;
@@ -59,69 +132,38 @@
 @property(retain) SBFolderSettings *folderSettings;
 @end
 
-// iOS (All versions)
-@interface SBAlertItem : NSObject <UIAlertViewDelegate>
-// NOTE: In iOS 3, this returns a UIModalView.
-- (UIAlertView *)alertSheet;
-@end
-
-@interface SBAlertItemsController : NSObject
-+ (id)sharedInstance;
-- (void)activateAlertItem:(id)item;
-@end
-
-@interface SBIconController : NSObject
-+ (id)sharedInstance;
-@end
-@interface SBIconController (Firmware_GTE_60)
-- (void)noteIconStateChangedExternally;
-@end
-@interface SBIconController (Firmware_GTE_71)
-- (NSUInteger)maxIconCountForDock;
-- (NSUInteger)maxIconCountForListInFolderClass:(Class)klass;
-- (NSUInteger)maxListCountForFolders;
-@end
-
-@interface SBIconModel : NSObject
-- (id)iconState;
-@end
-@interface SBIconModel (Firmware_LT_40)
-@property(readonly, retain) SBButtonBar *buttonBar;
-@property(readonly, retain) NSMutableArray *iconLists;
-- (void)compactIconLists;
-@end
-@interface SBIconModel (Firmware_GTE_40_LT_60)
-- (id)iconStatePath;
-@end
-@interface SBIconModel (Firmware_LT_60)
-+ (id)sharedInstance;
-- (void)noteIconStateChangedExternally;
-@end
-
 /**
- * AppID: com.apple.Preferences
+ * Bundle: com.apple.Preferences
  */
 
 @interface PSSpecifier : NSObject {
     SEL getter;
     SEL setter;
 }
-@property(assign, nonatomic) SEL buttonAction;
 @property(assign, nonatomic) int cellType;
 @property(assign, nonatomic) Class detailControllerClass;
 @property(assign, nonatomic) Class editPaneClass;
+@property(assign, nonatomic) id target;
+
+// CALLED
+@property(assign, nonatomic) SEL buttonAction;
 @property(retain, nonatomic) NSString *identifier;
 @property(retain, nonatomic) NSString *name;
-@property(assign, nonatomic) id target;
 + (id)preferenceSpecifierNamed:(id)named target:(id)target set:(SEL)set get:(SEL)get detail:(Class)detail cell:(int)cell edit:(Class)edit;
 - (void)setProperty:(id)property forKey:(id)key;
 @end
 
 @interface PSViewController : UIViewController @end
 @interface PSListController : PSViewController
+// CALLED
 - (id)specifierForID:(id)anId;
 @end
 @interface ResetPrefController : PSListController
+// HOOKED
+- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex;
+- (id)loadSpecifiersFromPlistName:(id)plistName target:(id)target;
+
+// HOOKED AND CALLED
 - (void)resetIconPositions:(id)positions;
 @end
 
