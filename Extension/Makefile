@@ -1,6 +1,6 @@
 TWEAK_NAME = IconSupport
 
-IconSupport_OBJCC_FILES = IconSupport.mm IconSupportClassic.mm ISIconSupport.mm ISAlertItem.mm ISLayoutRepairedAlertItem.mm ISStaleFileAlertItem.mm Preferences.mm
+IconSupport_OBJCC_FILES = IconSupport.xm IconSupportClassic.xm ISIconSupport.mm ISAlertItem.xm ISLayoutRepairedAlertItem.xm ISStaleFileAlertItem.xm Preferences.xm
 IconSupport_FRAMEWORKS = UIKit CoreGraphics
 IconSupport_OBJCCFLAGS = -DAPP_ID=\"$(APP_ID)\" -I ../Common -include Headers.h -include Firmware.h -fvisibility=hidden
 
