@@ -1,0 +1,6 @@
+SUBPROJECTS = Extension
+
+export ARCHS = x86_64
+export TARGET = simulator:clang:latest:7.0
+
+include Makefile

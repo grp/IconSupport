@@ -1,6 +1,7 @@
-#include <notify.h>
-
 #import "ISIconSupport.h"
+
+#include <notify.h>
+#include <substrate.h>
 
 static char kIconLayoutActionSheet;
 

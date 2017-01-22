@@ -5,6 +5,8 @@
 
 #import "ISIconSupport.h"
 
+#include <substrate.h>
+
 // Horrible horrible way of going about doing it but it works /for now/
 #define isiPad() ([UIDevice instancesRespondToSelector:@selector(isWildcat)] && [[UIDevice currentDevice] isWildcat])
 
