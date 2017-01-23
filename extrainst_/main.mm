@@ -9,7 +9,7 @@
 int main(int argc, char *argv[]) {
     // NOTE: This conversion is only needed for iOS 4.x+, as the 3.x code for
     //       IconSupport still uses hash-postfixed plist files.
-    if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_0) {
+    if (IOS_LT(4_0)) {
         return 0;
     }
 

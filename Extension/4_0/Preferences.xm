@@ -27,7 +27,7 @@ static char kIconLayoutActionSheet;
                 edit:MSHookIvar<Class>(specifier, "editPaneClass")
                 ];
             [replacement setProperty:[specifier identifier] forKey:@"id"];
-            if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_6_0) {
+            if (IOS_LT(6_0)) {
                 SEL &action = MSHookIvar<SEL>(replacement, "action");
                 action = @selector(showLayoutPicker:);
             } else {

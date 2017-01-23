@@ -56,9 +56,9 @@ void initISAlertItem() {
 
             %init;
 
-            if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_5_0) {
+            if (IOS_LT(5_0)) {
                 %init(GFirmware_GTE_40_LT_50);
-            } else if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_6_0) {
+            } else if (IOS_LT(6_0)) {
                 %init(GFirmware_GTE_50_LT_60);
             } else {
                 %init(GFirmware_GTE_60);

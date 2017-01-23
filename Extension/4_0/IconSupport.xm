@@ -44,7 +44,7 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, NSMutable
         //        need to be updated in order to process correct folder class.
         int maxLists, maxIcons;
         Class $FolderClass = (isRootFolder || isDock) ? objc_getClass("SBRootFolder") : objc_getClass("SBFolder");
-        if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_7_1) {
+        if (IOS_LT(7_1)) {
             SBFolder *folder = [[$FolderClass alloc] init];
             if (isDock) {
                 maxLists = 1;
@@ -66,7 +66,7 @@ static NSDictionary * repairFolderIconState(NSDictionary *folderState, NSMutable
         }
 
         // Look for and process any subfolders
-        BOOL supportsListTypes = (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_5_0);
+        BOOL supportsListTypes = IOS_GTE(5_0);
         for (NSArray *list in currentIconLists) {
             // Make a mutable copy of the list for modification
             NSMutableArray *iconList = [list mutableCopy];
@@ -183,7 +183,7 @@ NSDictionary * repairIconState(NSDictionary *iconState) {
     //       orphaned icons will be gathered for later redistribution.
     NSMutableArray *orphanedIcons = [[NSMutableArray alloc] init];
 
-    if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_7_0) {
+    if (IOS_GTE(7_0)) {
         // NOTE: Check this value every time, as it could be changed mid-process
         //       (via, for example, the hidden settings panel).
         hasSubfolderSupport$ = [[[[objc_getClass("SBPrototypeController") sharedInstance] rootSettings] folderSettings] allowNestedFolders];
@@ -492,19 +492,17 @@ __attribute__((constructor)) static void init() {
             %init;
 
             // Initialize firmware-dependent hooks
-            if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_6_0) {
-                // iOS 6
+            if (IOS_GTE(6_0)) {
                 %init(GFirmware_GTE_60);
             } else {
                 %init(GFirmware_LT_60);
 
-                if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_5_0) {
-                    // iOS 5
+                if (IOS_GTE(5_0)) {
                     %init(GFirmware_GTE_50_LT_60);
                 }
             }
 
-            if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_7_0) {
+            if (IOS_LT(7_0)) {
                 // FIXME: Find a better way to detect if subfolders are supported.
                 NSFileManager *manager = [NSFileManager defaultManager];
                 hasSubfolderSupport$ =

@@ -3,7 +3,7 @@
 %ctor {
     @autoreleasepool {
         const char *path = NULL;
-        if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_0) {
+        if (IOS_LT(4_0)) {
             path = "/Library/Application Support/IconSupport/Versions/3.0/libIconSupport.dylib";
         } else {
             path = "/Library/Application Support/IconSupport/Versions/4.0/libIconSupport.dylib";
