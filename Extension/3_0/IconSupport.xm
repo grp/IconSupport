@@ -181,7 +181,7 @@ static id representation(id iconListOrDock) {
 
 %end // SBIconModel
 
-__attribute__((constructor)) static void init() {
+%ctor {
     @autoreleasepool {
         // NOTE: This library should only be loaded for SpringBoard
         NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];

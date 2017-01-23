@@ -1,5 +1,10 @@
 #import "ISIconSupport.h"
 
+#import "PreferenceConstants.h"
+#include <substrate.h>
+
+NSDictionary * repairIconState(NSDictionary *iconState);
+
 static ISIconSupport *sharedSupport = nil;
 
 @implementation ISIconSupport
@@ -48,9 +53,36 @@ static ISIconSupport *sharedSupport = nil;
     return ![[self extensionString] isEqualToString:@""];
 }
 
+- (void)repairAndReloadIconState {
+    SBIconModel *iconModel = IOS_LT(6_0) ?
+        [objc_getClass("SBIconModel") sharedInstance] : [[objc_getClass("SBIconController") sharedInstance] model];
+    [self repairAndReloadIconState:[iconModel iconState]];
+}
+
+- (void)repairAndReloadIconState:(NSDictionary *)iconState {
+    if (iconState == nil) {
+        return;
+    }
+
+    iconState = repairIconState(iconState);
+    if (IOS_LT(6_0)) {
+        SBIconModel *iconModel = [objc_getClass("SBIconModel") sharedInstance];
+        [iconState writeToFile:[iconModel iconStatePath] atomically:YES];
+        [iconModel noteIconStateChangedExternally];
+    } else {
+        [iconState writeToFile:[[[objc_getClass("SBDefaultIconModelStore") sharedInstance] currentIconStateURL] path] atomically:YES];
+        [[objc_getClass("SBIconController") sharedInstance] noteIconStateChangedExternally];
+    }
+}
+
+- (void)repairIconStateUponNextRespring {
+    CFPreferencesSetAppValue((CFStringRef)kMarkedForRepair, [NSNumber numberWithBool:YES], CFSTR(APP_ID));
+    CFPreferencesAppSynchronize(CFSTR(APP_ID));
+}
+
 @end
 
-__attribute__((constructor)) static void initISIconSupport() {
+%ctor {
     @autoreleasepool {
         // NOTE: This library should only be loaded for SpringBoard
         NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];

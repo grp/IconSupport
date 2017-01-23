@@ -95,7 +95,7 @@ static void importLayoutSafeMode(CFNotificationCenterRef center, void *observer,
 
 //==============================================================================
 
-__attribute__((constructor)) static void init() {
+%ctor {
     @autoreleasepool {
         NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
         if ([bundleId isEqualToString:@"com.apple.Preferences"]) {
