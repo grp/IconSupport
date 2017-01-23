@@ -120,4 +120,4 @@ static void importLayoutSafeMode(CFNotificationCenterRef center, void *observer,
     }
 }
 
-/* vim: set filetype=objcpp sw=4 ts=4 expandtab tw=80 ff=unix: */
+/* vim: set ft=logos ff=unix tw=80 sw=4 ts=4 expandtab: */

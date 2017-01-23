@@ -81,4 +81,4 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-/* vim: set filetype=objc sw=4 ts=4 expandtab textwidth=80 ff=unix: */
+/* vim: set ft=objc ff=unix tw=80 sw=4 ts=4 expandtab: */

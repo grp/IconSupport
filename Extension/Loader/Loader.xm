@@ -12,4 +12,4 @@
     }
 }
 
-/* vim: set ft=logos ff=unix sw=4 ts=4 tw=80 expandtab: */
+/* vim: set ft=logos ff=unix tw=80 sw=4 ts=4 expandtab: */
