@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
                 }
             } else if (strcmp(argv[1], "upgrade") == 0) {
                 // Mark that an upgrade has occurred
-                CFPreferencesSetAppValue((CFStringRef)kFirstLoadAfterUpgrade, [NSNumber numberWithBool:YES], CFSTR(APP_ID));
+                CFPreferencesSetAppValue((CFStringRef)kFirstLoadAfterUpgrade, @YES, CFSTR(APP_ID));
                 CFPreferencesAppSynchronize(CFSTR(APP_ID));
             }
         }

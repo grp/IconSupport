@@ -145,7 +145,7 @@ static id representation(id iconListOrDock) {
 
     // Add the padding to the end of the array
     while (([holdAllIcons count] % maxPerPage) != 0) {
-        [holdAllIcons addObject:[NSNumber numberWithInt:0]];
+        [holdAllIcons addObject:@0];
     }
 
     // Split this huge array into 4x4 pages/rows

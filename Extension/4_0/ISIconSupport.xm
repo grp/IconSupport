@@ -76,7 +76,7 @@ static ISIconSupport *sharedSupport = nil;
 }
 
 - (void)repairIconStateUponNextRespring {
-    CFPreferencesSetAppValue((CFStringRef)kMarkedForRepair, [NSNumber numberWithBool:YES], CFSTR(APP_ID));
+    CFPreferencesSetAppValue((CFStringRef)kMarkedForRepair, @YES, CFSTR(APP_ID));
     CFPreferencesAppSynchronize(CFSTR(APP_ID));
 }
 
