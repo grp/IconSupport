@@ -1,7 +1,6 @@
 /**
  * Description: Post install script for IconSupport
  * Author: Lance Fetters (aka. ashikase)
- * Last-modified: 2014-01-29 00:16:28
  */
 
 #include "PreferenceConstants.h"

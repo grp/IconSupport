@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Description: Script to fetch requirements for building this project.
-# Last-modified: 2011-05-30 21:47:49
 #
 # Note that this script is not perfect and does not handle all errors.
 # Any improvements are welcome.
