@@ -96,29 +96,26 @@ static void importLayoutSafeMode(CFNotificationCenterRef center, void *observer,
 //==============================================================================
 
 __attribute__((constructor)) static void init() {
-    // Only hook for iOS 4 or newer
-    if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_4_0) {
-        @autoreleasepool {
-            NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
-            if ([bundleId isEqualToString:@"com.apple.Preferences"]) {
-                // NOTE: These hooks should only be loaded for Preferences.app (Settings)
-                CFPropertyListRef propList = CFPreferencesCopyAppValue(CFSTR("ISLastUsed"), CFSTR("com.apple.springboard"));
-                if (propList != NULL) {
-                    if (CFGetTypeID(propList) == CFStringGetTypeID()) {
-                        if (![(NSString *)propList isEqualToString:@""]) {
-                            // IconSupport is in use; initialize hooks
-                            %init;
-                        }
+    @autoreleasepool {
+        NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
+        if ([bundleId isEqualToString:@"com.apple.Preferences"]) {
+            // NOTE: These hooks should only be loaded for Preferences.app (Settings)
+            CFPropertyListRef propList = CFPreferencesCopyAppValue(CFSTR("ISLastUsed"), CFSTR("com.apple.springboard"));
+            if (propList != NULL) {
+                if (CFGetTypeID(propList) == CFStringGetTypeID()) {
+                    if (![(NSString *)propList isEqualToString:@""]) {
+                        // IconSupport is in use; initialize hooks
+                        %init;
                     }
-                    CFRelease(propList);
                 }
-            } else if ([bundleId isEqualToString:@"com.apple.springboard"]) {
-                // Add observer for notifications from Preferences.app
-                CFNotificationCenterAddObserver(
-                        CFNotificationCenterGetDarwinNotifyCenter(),
-                        NULL, importLayoutSafeMode, CFSTR(APP_ID".layout.safemode"),
-                        NULL, 0);
+                CFRelease(propList);
             }
+        } else if ([bundleId isEqualToString:@"com.apple.springboard"]) {
+            // Add observer for notifications from Preferences.app
+            CFNotificationCenterAddObserver(
+                    CFNotificationCenterGetDarwinNotifyCenter(),
+                    NULL, importLayoutSafeMode, CFSTR(APP_ID".layout.safemode"),
+                    NULL, 0);
         }
     }
 }

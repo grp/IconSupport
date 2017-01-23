@@ -54,22 +54,12 @@ static ISIconSupport *sharedSupport = nil;
 }
 
 - (void)repairAndReloadIconState {
-    if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_0) {
-        // iOS 3.x
-        return;
-    }
-
     SBIconModel *iconModel = (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_6_0) ?
         [objc_getClass("SBIconModel") sharedInstance] : [[objc_getClass("SBIconController") sharedInstance] model];
     [self repairAndReloadIconState:[iconModel iconState]];
 }
 
 - (void)repairAndReloadIconState:(NSDictionary *)iconState {
-    if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_0) {
-        // iOS 3.x
-        return;
-    }
-
     if (iconState == nil) {
         return;
     }
