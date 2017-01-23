@@ -7,5 +7,5 @@ extrainst__OBJCCFLAGS = -DAPP_ID=\"$(APP_ID)\" -I $(THEOS_PROJECT_DIR)/Common -i
 
 ARCHS := armv6
 
-include ../theos/makefiles/common.mk
-include ../theos/makefiles/tool.mk
+include $(THEOS)/makefiles/common.mk
+include $(THEOS)/makefiles/tool.mk
