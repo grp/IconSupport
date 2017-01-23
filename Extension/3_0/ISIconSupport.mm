@@ -51,15 +51,13 @@ static ISIconSupport *sharedSupport = nil;
 @end
 
 __attribute__((constructor)) static void initISIconSupport() {
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-    // NOTE: This library should only be loaded for SpringBoard
-    NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
-    if ([bundleId isEqualToString:@"com.apple.springboard"]) {
-        sharedSupport = [[ISIconSupport alloc] init];
+    @autoreleasepool {
+        // NOTE: This library should only be loaded for SpringBoard
+        NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
+        if ([bundleId isEqualToString:@"com.apple.springboard"]) {
+            sharedSupport = [[ISIconSupport alloc] init];
+        }
     }
-
-    [pool release];
 }
 
 /* vim: set filetype=objcpp sw=4 ts=4 expandtab tw=80 ff=unix: */

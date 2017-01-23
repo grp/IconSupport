@@ -487,36 +487,34 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
 __attribute__((constructor)) static void init() {
     // Only hook for iOS 4 or newer
     if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_4_0) {
-        NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+        @autoreleasepool {
+            // NOTE: This library should only be loaded for SpringBoard
+            NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
+            if ([bundleId isEqualToString:@"com.apple.springboard"]) {
+                %init;
 
-        // NOTE: This library should only be loaded for SpringBoard
-        NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
-        if ([bundleId isEqualToString:@"com.apple.springboard"]) {
-            %init;
+                // Initialize firmware-dependent hooks
+                if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_6_0) {
+                    // iOS 6
+                    %init(GFirmware_GTE_60);
+                } else {
+                    %init(GFirmware_LT_60);
 
-            // Initialize firmware-dependent hooks
-            if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_6_0) {
-                // iOS 6
-                %init(GFirmware_GTE_60);
-            } else {
-                %init(GFirmware_LT_60);
+                    if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_5_0) {
+                        // iOS 5
+                        %init(GFirmware_GTE_50_LT_60);
+                    }
+                }
 
-                if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_5_0) {
-                    // iOS 5
-                    %init(GFirmware_GTE_50_LT_60);
+                if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_7_0) {
+                    // FIXME: Find a better way to detect if subfolders are supported.
+                    NSFileManager *manager = [NSFileManager defaultManager];
+                    hasSubfolderSupport$ =
+                        [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FolderEnhancer.dylib"] ||
+                        [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FoldersInFolders.dylib"];
                 }
             }
-
-            if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_7_0) {
-                // FIXME: Find a better way to detect if subfolders are supported.
-                NSFileManager *manager = [NSFileManager defaultManager];
-                hasSubfolderSupport$ =
-                    [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FolderEnhancer.dylib"] ||
-                    [manager fileExistsAtPath:@"/Library/MobileSubstrate/DynamicLibraries/FoldersInFolders.dylib"];
-            }
         }
-
-        [pool release];
     }
 }
 

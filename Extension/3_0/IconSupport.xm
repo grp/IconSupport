@@ -184,16 +184,14 @@ static id representation(id iconListOrDock) {
 __attribute__((constructor)) static void init() {
     // Only hook for iOS 3
     if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_4_0) {
-        NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-        // NOTE: This library should only be loaded for SpringBoard
-        NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
-        if ([bundleId isEqualToString:@"com.apple.springboard"]) {
-            // NOTE: IconSupport does not support firmware older than iOS 3.
-            %init;
+        @autoreleasepool {
+            // NOTE: This library should only be loaded for SpringBoard
+            NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
+            if ([bundleId isEqualToString:@"com.apple.springboard"]) {
+                // NOTE: IconSupport does not support firmware older than iOS 3.
+                %init;
+            }
         }
-
-        [pool release];
     }
 }
 
