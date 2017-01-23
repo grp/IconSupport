@@ -3,7 +3,6 @@
 @interface ISIconSupport : NSObject {
     NSMutableSet *extensions;
 }
-
 + (id)sharedInstance;
 - (NSString *)extensionString;
 - (BOOL)addExtension:(NSString *)extension;
