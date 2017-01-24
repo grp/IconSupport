@@ -341,7 +341,7 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
         }
     }
 
-    return %orig;
+    return %orig();
 }
 
 %end
@@ -352,11 +352,11 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
 
 - (BOOL)importState:(id)state {
     // Returning NO disables iTunes sync
-    return [[ISIconSupport sharedInstance] isBeingUsedByExtensions] ? NO : %orig;
+    return [[ISIconSupport sharedInstance] isBeingUsedByExtensions] ? NO : %orig();
 }
 
 - (id)exportState:(BOOL)withFolders {
-    NSArray *origState = %orig;
+    NSArray *origState = %orig();
 
     if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
         return origState;
@@ -411,7 +411,7 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
 %hook SBIconModel %group GFirmware_LT_60
 
 - (id)iconStatePath {
-    NSString *path = %orig;
+    NSString *path = %orig();
     if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
         path = [[path stringByDeletingLastPathComponent] stringByAppendingPathComponent:kFilenameState];
     }
@@ -427,7 +427,7 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
 - (id)_cachedIconStatePath {
     // NOTE: Failing to override this could cause Safe Mode's cached layout to
     //       be used (if it exists) and thus overwrite IconSupport's layout.
-    NSString *path = %orig;
+    NSString *path = %orig();
     if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
         path = [[path stringByDeletingLastPathComponent] stringByAppendingPathComponent:kFilenameDesiredState];
     }
@@ -441,7 +441,7 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
 %hook SBDefaultIconModelStore %group GFirmware_GTE_60
 
 - (id)init {
-    self = %orig;
+    self = %orig();
     if (self != nil) {
         if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
             // Override icon state
@@ -465,7 +465,7 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
 %hook SpringBoard
 
 - (void)applicationDidFinishLaunching:(UIApplication *)application {
-    %orig;
+    %orig();
 
     // Display any queued alerts
     // NOTE: Perform here to prevent issues with more recent iOS versions
@@ -489,7 +489,7 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
         // NOTE: This library should only be loaded for SpringBoard
         NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
         if ([bundleId isEqualToString:@"com.apple.springboard"]) {
-            %init;
+            %init();
 
             // Initialize firmware-dependent hooks
             if (IOS_GTE(6_0)) {

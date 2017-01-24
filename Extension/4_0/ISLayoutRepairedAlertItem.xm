@@ -35,7 +35,7 @@ void initISLayoutRepairedAlertItem() {
         Class $ISLayoutRepairedAlertItem = objc_allocateClassPair($SuperClass, "ISLayoutRepairedAlertItem", 0);
         if ($ISLayoutRepairedAlertItem != Nil) {
             objc_registerClassPair($ISLayoutRepairedAlertItem);
-            %init;
+            %init();
         }
     }
 }

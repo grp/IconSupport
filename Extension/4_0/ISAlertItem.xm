@@ -11,7 +11,7 @@
 %hook ISAlertItem %group GFirmware_GTE_40_LT_50
 
 - (void)didDeactivateForReason:(int)reason {
-    %orig;
+    %orig();
 
     if (reason == 0) {
         // Was deactivated due to lock, not user interaction
@@ -54,7 +54,7 @@ void initISAlertItem() {
         if ($ISAlertItem != Nil) {
             objc_registerClassPair($ISAlertItem);
 
-            %init;
+            %init();
 
             if (IOS_LT(5_0)) {
                 %init(GFirmware_GTE_40_LT_50);

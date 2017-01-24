@@ -86,7 +86,7 @@ static void didDeleteLayout() {
     }
 
     // Call original implementation to dismiss the alert item.
-    %orig;
+    %orig();
 }
 
 %end %end
@@ -101,7 +101,7 @@ void initISStaleFileAlertItem() {
         Class $ISStaleFileAlertItem = objc_allocateClassPair($SuperClass, "ISStaleFileAlertItem", 0);
         if ($ISStaleFileAlertItem != Nil) {
             objc_registerClassPair($ISStaleFileAlertItem);
-            %init;
+            %init();
 
             if (IOS_LT(10_0)) {
                 %init(GFirmware_LT_10);

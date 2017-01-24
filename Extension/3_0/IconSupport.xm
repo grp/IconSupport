@@ -34,13 +34,13 @@ static id representation(id iconListOrDock) {
 
 - (BOOL)importState:(id)state {
     // Returning NO disables iTunes sync
-    return [[ISIconSupport sharedInstance] isBeingUsedByExtensions] ? NO : %orig;
+    return [[ISIconSupport sharedInstance] isBeingUsedByExtensions] ? NO : %orig();
 }
 
 - (id)iconState {
     ISIconSupport *iconSupport = [ISIconSupport sharedInstance];
     if (![iconSupport isBeingUsedByExtensions]) {
-        return %orig;
+        return %orig();
     }
 
     id ret = nil;
@@ -77,13 +77,13 @@ static id representation(id iconListOrDock) {
     }
 
     // If ret is still nil, just get whatever SpringBoard wants
-    return ret ?: %orig;
+    return ret ?: %orig();
 }
 
 - (void)_writeIconState {
     ISIconSupport *iconSupport = [ISIconSupport sharedInstance];
     if (![iconSupport isBeingUsedByExtensions]) {
-        %orig;
+        %orig();
         return;
     }
 
@@ -109,7 +109,7 @@ static id representation(id iconListOrDock) {
 }
 
 - (id)exportState {
-    NSArray *originalState = %orig;
+    NSArray *originalState = %orig();
 
     if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
         return originalState;
@@ -173,7 +173,7 @@ static id representation(id iconListOrDock) {
 }
 
 - (void)relayout {
-    %orig;
+    %orig();
 
     // Fix for things like LockInfo, that need us to compact the icons lists at this point.
     [self compactIconLists];
@@ -187,7 +187,7 @@ static id representation(id iconListOrDock) {
         NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier];
         if ([bundleId isEqualToString:@"com.apple.springboard"]) {
             // NOTE: IconSupport does not support firmware older than iOS 3.
-            %init;
+            %init();
         }
     }
 }

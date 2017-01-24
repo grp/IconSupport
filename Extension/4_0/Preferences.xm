@@ -9,7 +9,7 @@ static char kIconLayoutActionSheet;
 
 - (id)loadSpecifiersFromPlistName:(id)plistName target:(id)target {
     NSMutableArray *specifiers = [NSMutableArray array];
-    for (id specifier in %orig) {
+    for (id specifier in %orig()) {
         // Search for the "Reset Home Screen Layout" specifier
         if ([[specifier identifier] isEqualToString:@"RESET_ICONS_LABEL"]) {
             // Replace specifier with one that will call our method
@@ -71,7 +71,7 @@ static char kIconLayoutActionSheet;
         // Release the sheet
         objc_setAssociatedObject(self, &kIconLayoutActionSheet, nil, OBJC_ASSOCIATION_RETAIN);
     } else {
-        %orig;
+        %orig();
     }
 }
 
@@ -79,7 +79,7 @@ static char kIconLayoutActionSheet;
     NSString *userPath = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) objectAtIndex:0];
     NSString *iconSupportPath = [userPath stringByAppendingPathComponent:@"SpringBoard/IconSupportState.plist"];
     [[NSFileManager defaultManager] removeItemAtPath:iconSupportPath error:NULL];
-    %orig;
+    %orig();
 }
 
 %end
@@ -105,7 +105,7 @@ static void importLayoutSafeMode(CFNotificationCenterRef center, void *observer,
                 if (CFGetTypeID(propList) == CFStringGetTypeID()) {
                     if (![(NSString *)propList isEqualToString:@""]) {
                         // IconSupport is in use; initialize hooks
-                        %init;
+                        %init();
                     }
                 }
                 CFRelease(propList);
