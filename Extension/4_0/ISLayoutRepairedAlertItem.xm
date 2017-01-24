@@ -5,12 +5,22 @@
 - (void)configure:(BOOL)configure requirePasscodeForActions:(BOOL)require {
     NSString *title = @"IconSupport Notice";
     NSString *body = @"You have added or removed software that affects your icon layout.\n\nYour layout has been adjusted to prevent errors.";
+    NSString *dismissButtonTitle = @"Dismiss";
 
-    UIAlertView *alertView = [self alertSheet];
-    [alertView setDelegate:self];
-    [alertView setTitle:title];
-    [alertView setMessage:body];
-    [alertView addButtonWithTitle:@"Dismiss"];
+    if (IOS_LT(10_0)) {
+        UIAlertView *alertView = [self alertSheet];
+        [alertView setDelegate:self];
+        [alertView setTitle:title];
+        [alertView setMessage:body];
+        [alertView addButtonWithTitle:dismissButtonTitle];
+    } else {
+        UIAlertController *alertController = [self alertController];
+        [alertController setTitle:title];
+        [alertController setMessage:body];
+        [alertController addAction:[UIAlertAction actionWithTitle:dismissButtonTitle style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+            [self deactivateForButton];
+        }]];
+    }
 }
 
 %end

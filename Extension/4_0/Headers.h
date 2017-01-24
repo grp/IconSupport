@@ -6,11 +6,8 @@
  */
 
 @interface SBAlertItem : NSObject <UIAlertViewDelegate>
-// CALLED
-- (UIAlertView *)alertSheet;
 // HOOKED
 - (BOOL)shouldShowInLockScreen;
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex;
 - (void)configure:(BOOL)configure requirePasscodeForActions:(BOOL)require;
 @end
 @interface SBAlertItem (Firmware_GTE_40_LT_50)
@@ -24,6 +21,17 @@
 @interface SBAlertItem (Firmware_GTE_60)
 // HOOKED
 - (BOOL)behavesSuperModally;
+@end
+@interface SBAlertItem (Firmware_LT_10)
+// CALLED
+- (UIAlertView *)alertSheet;
+// HOOKED
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex;
+@end
+@interface SBAlertItem (Firmware_GTE_10)
+// CALLED
+- (id)alertController;
+- (void)deactivateForButton;
 @end
 
 /**
