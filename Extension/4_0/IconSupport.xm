@@ -7,9 +7,6 @@
 #include <substrate.h>
 #include "PreferenceConstants.h"
 
-#define kISiPhoneDefaultMaxIconsPerPage 16
-#define kISiPadDefaultMaxIconsPerPage 20
-
 #define kFilenameState @"IconSupportState.plist"
 #define kFilenameDesiredState @"DesiredIconSupportState.plist"
 
@@ -356,52 +353,20 @@ static inline BOOL boolForKey(NSString *key, BOOL defaultValue) {
 }
 
 - (id)exportState:(BOOL)withFolders {
-    NSArray *origState = %orig();
-
-    if (![[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
-        return origState;
-    }
-
-    // Add dock, unmodified,  to exported state
-    NSMutableArray *newState = [NSMutableArray array];
-    [newState addObject:[origState objectAtIndex:0]];
-
-    // Collect icons from root folder and all subfolders
-    NSMutableArray *rootFolderIcons = [[NSMutableArray alloc] init];
-    NSArray *iconLists = [origState subarrayWithRange:NSMakeRange(1, [origState count] - 1)];
-    for (NSArray *iconList in iconLists) {
-        for (NSDictionary *icon in iconList) {
-            NSArray *folderIconLists = [icon objectForKey:@"iconLists"];
-            if (folderIconLists != nil) {
-                // Is a folder
-                // NOTE: Must flatten to avoid issues with extensions that
-                //       modify the number of icons/lists that folders can hold.
-                for (NSArray *folderIconList in folderIconLists) {
-                    [rootFolderIcons addObjectsFromArray:folderIconList];
+    if ([[ISIconSupport sharedInstance] isBeingUsedByExtensions]) {
+        // Return a list containing a single "disabled by IconSupport" icon.
+        return @[
+            @[
+                @{
+                    @"displayIdentifier" : @"com.chpwn.iconsupport",
+                    @"displayName" : @"IconSupport"
                 }
-            } else {
-                // Is not a folder
-                [rootFolderIcons addObject:icon];
-            }
-        }
+            ], 
+            @[]
+        ];
+    } else {
+        return %orig();
     }
-
-    // Split into pages of 16
-    // FIXME: Need to update for iPad?
-    while ([rootFolderIcons count] > kISiPhoneDefaultMaxIconsPerPage) {
-        NSRange range = NSMakeRange(0, kISiPhoneDefaultMaxIconsPerPage);
-        NSArray *page = [rootFolderIcons subarrayWithRange:range];
-        [newState addObject:page];
-        [rootFolderIcons removeObjectsInRange:range];
-    }
-
-    // If root folder is not empty, add to exported icon state
-    if ([rootFolderIcons count] > 0) {
-        [newState addObject:rootFolderIcons];
-    }
-    [rootFolderIcons release];
-
-    return newState;
 }
 
 %end
