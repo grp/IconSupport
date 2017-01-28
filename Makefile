@@ -1,7 +1,7 @@
 SUBPROJECTS ?= Application Extension/Loader Extension/3_0 Extension/4_0 extrainst_
 
 export APP_ID := com.chpwn.iconsupport
-export TARGET ?= iphone:7.0:3.0
+export TARGET ?= iphone:8.4:3.0
 
 include $(THEOS)/makefiles/common.mk
 include $(THEOS)/makefiles/aggregate.mk
