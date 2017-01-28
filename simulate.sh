@@ -11,14 +11,14 @@ set -e
 
 # Determine name of dylib.
 if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <name_of_dylib>"
+    echo "Usage: $0 <path_to_dylib>"
     exit 1
 fi
-dylib_name=$1
+dylib_path=$1
 
 # Clean and compile.
 make -f Makefile.simulator clean all
 
 # Inject into simulator and relaunch.
-xcrun simctl spawn booted launchctl debug system/com.apple.SpringBoard --environment DYLD_INSERT_LIBRARIES=$PWD/.theos/obj/iphone_simulator/debug/${dylib_name}.dylib
+xcrun simctl spawn booted launchctl debug system/com.apple.SpringBoard --environment DYLD_INSERT_LIBRARIES=${dylib_path}
 xcrun simctl spawn booted launchctl stop com.apple.SpringBoard
