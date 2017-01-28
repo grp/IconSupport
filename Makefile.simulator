@@ -1,4 +1,4 @@
-SUBPROJECTS = Extension/4_0
+SUBPROJECTS = Extension/4.0
 
 export ARCHS = x86_64
 export TARGET = simulator:clang:latest:7.0
