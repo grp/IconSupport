@@ -59,12 +59,12 @@ static void didDeleteLayout() {
         UIAlertController *alertController = [self alertController];
         [alertController setTitle:title];
         [alertController setMessage:body];
-        [alertController addAction:[UIAlertAction actionWithTitle:restoreButtonTitle style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        [alertController addAction:[%c(UIAlertAction) actionWithTitle:restoreButtonTitle style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
             [self deactivateForButton];
             restoreLayout();
             didRestoreLayout();
         }]];
-        [alertController addAction:[UIAlertAction actionWithTitle:deleteButtonTitle style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        [alertController addAction:[%c(UIAlertAction) actionWithTitle:deleteButtonTitle style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
             [self deactivateForButton];
             deleteLayout();
             didDeleteLayout();

@@ -17,7 +17,7 @@
         UIAlertController *alertController = [self alertController];
         [alertController setTitle:title];
         [alertController setMessage:body];
-        [alertController addAction:[UIAlertAction actionWithTitle:dismissButtonTitle style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        [alertController addAction:[%c(UIAlertAction) actionWithTitle:dismissButtonTitle style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
             [self deactivateForButton];
         }]];
     }
